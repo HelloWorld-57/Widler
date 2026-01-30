@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "usersservice"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["usersservice:80"]
+
+  - job_name: "postsservice"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["postsservice:80"]
+      
+  - job_name: "kafka"
+    static_configs:
+      - targets: ["kafka_exporter:9308"]
