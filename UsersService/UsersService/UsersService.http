@@ -1,0 +1,32 @@
+@UsersService_HostAddress = http://localhost:5228
+
+### Получить всех пользователей
+GET {{UsersService_HostAddress}}/api/users
+
+### Получить пользователя по id
+GET {{UsersService_HostAddress}}/api/users/1
+
+### Создать пользователя
+POST {{UsersService_HostAddress}}/api/users
+Content-Type: application/json
+
+{
+  "name": "John",
+  "secondName": "Doe",
+  "email": "john@example.com",
+  "age": 25
+}
+
+### Обновить пользователя
+PUT {{UsersService_HostAddress}}/api/users/1
+Content-Type: application/json
+
+{
+  "name": "John",
+  "secondName": "Smith",
+  "email": "john@example.com",
+  "age": 26
+}
+
+### Удалить пользователя
+DELETE {{UsersService_HostAddress}}/api/users/1

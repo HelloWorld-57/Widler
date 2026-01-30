@@ -1,0 +1,40 @@
+
+filebeat.inputs:
+  - type: filestream
+    enabled: true
+    paths:
+      - /var/lib/docker/containers/*/*.log
+    json.message_key: log
+    json.keys_under_root: true
+    json.add_error_key: true
+
+processors:
+  - add_docker_metadata:
+      host: "unix:///var/run/docker.sock"
+  
+  # Если внутри поля 'message' (от Serilog) лежит JSON, пробуем его распаковать
+  - decode_json_fields:
+      fields: ["message"]
+      target: ""
+      overwrite_keys: true
+      process_array: false
+      max_depth: 1
+      when:
+        regexp:
+          message: "^{.*}$"
+  - drop_fields:
+      fields: ["log", "input", "ecs", "agent"]
+      ignore_missing: true
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  # Явно задаем имя индекса, чтобы не зависеть от ILM
+  index: "app-logs-%{+yyyy.MM.dd}"
+
+# Отключаем сложные настройки шаблонов, чтобы ES не ругался
+setup.ilm.enabled: false
+setup.template.name: "app-logs"
+setup.template.pattern: "app-logs-*"
+
+  
+  
