@@ -275,6 +275,7 @@ services:
         image: docker.elastic.co/beats/filebeat:9.2.2
         container_name: filebeat
         user: root
+        command: filebeat -e --strict.perms=false
         networks:
           - appnet
         depends_on:

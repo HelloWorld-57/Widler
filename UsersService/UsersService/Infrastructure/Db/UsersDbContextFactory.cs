@@ -9,6 +9,7 @@ namespace UsersService.Infrastructure.Db
         {
             var options = new DbContextOptionsBuilder<UsersDbContext>()
                 .UseNpgsql("Host=localhost;Port=5432;Database=usersdb;Username=users_user;Password=users_pass")
+                .UseSnakeCaseNamingConvention()
                 .Options;
 
             //UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
