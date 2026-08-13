@@ -9,6 +9,7 @@ namespace PostsService.Infrastructure.Db
         {
             var options = new DbContextOptionsBuilder<PostsDbContext>()
                 .UseNpgsql("Host=localhost;Port=5434;Database=postsdb;Username=posts_user;Password=posts_pass")
+                .UseSnakeCaseNamingConvention()
                 .Options;
 
             //UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))

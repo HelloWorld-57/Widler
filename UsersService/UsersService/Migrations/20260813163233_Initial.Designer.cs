@@ -2,18 +2,21 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using PostsService.Infrastructure.Db;
+using UsersService.Infrastructure.Db;
 
 #nullable disable
 
-namespace PostsService.Migrations
+namespace UsersService.Migrations
 {
-    [DbContext(typeof(PostsDbContext))]
-    partial class PostsDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(UsersDbContext))]
+    [Migration("20260813163233_Initial")]
+    partial class Initial
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,21 +25,15 @@ namespace PostsService.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("PostsService.Domain.Entities.Post", b =>
+            modelBuilder.Entity("UsersService.Domain.Entities.User", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("text")
                         .HasColumnName("id");
 
-                    b.Property<string>("Caption")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("caption");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("content");
+                    b.Property<DateTime>("BirthDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("birth_date");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone")
@@ -46,22 +43,32 @@ namespace PostsService.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("email");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
 
-                    b.Property<string>("UserId")
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("user_id");
+                        .HasColumnName("name");
+
+                    b.Property<string>("SecondName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("second_name");
 
                     b.HasKey("Id")
-                        .HasName("pk_posts");
+                        .HasName("pk_users");
 
-                    b.ToTable("posts", (string)null);
+                    b.ToTable("users", (string)null);
                 });
 
-            modelBuilder.Entity("PostsService.Infrastructure.Db.Inbox.ProcessedMessage", b =>
+            modelBuilder.Entity("UsersService.Infrastructure.Db.Inbox.ProcessedMessage", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("text")
@@ -90,7 +97,7 @@ namespace PostsService.Migrations
                     b.ToTable("processed_messages", (string)null);
                 });
 
-            modelBuilder.Entity("PostsService.Infrastructure.Db.Outbox.OutboxMessage", b =>
+            modelBuilder.Entity("UsersService.Infrastructure.Db.Outbox.OutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()

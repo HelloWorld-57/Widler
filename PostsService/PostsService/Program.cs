@@ -90,7 +90,8 @@ builder.Services.AddDbContext<PostsDbContext>((sp, options) =>
 {
     var interceptor = sp.GetRequiredService<OutboxSaveChangesInterceptor>();
     options.AddInterceptors(interceptor);
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+            .UseSnakeCaseNamingConvention();
 });
 
 builder.Services.Configure<KafkaTopics>(builder.Configuration.GetSection("Kafka:Topics"));
