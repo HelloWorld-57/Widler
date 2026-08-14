@@ -1,0 +1,127 @@
+x-dotnet-service: &dotnet-service
+  restart: unless-stopped
+  networks:
+    - appnet
+  environment:
+    ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+    APPLY_MIGRATIONS: "false"
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "5"
+      
+x-web-service: &web-service
+  restart: unless-stopped
+  networks:
+    - appnet
+
+services:
+  usersservice_migrations:
+    networks:
+        - appnet
+    build:
+        context: ./UsersService/UsersService
+        dockerfile: Dockerfile
+    command:
+        - dotnet
+        - UsersService.dll
+        - --migrate
+    depends_on:
+        postgres_users:
+          condition: service_healthy
+    restart: "no"
+    environment:
+          ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+          ConnectionStrings__DefaultConnection: Host=postgres_users;Port=5432;Database=${USERS_DB};Username=${USERS_USER};Password=${USERS_PASSWORD}
+
+  usersservice:
+    <<: *dotnet-service
+    build:
+        context: ./UsersService/UsersService
+        dockerfile: Dockerfile
+    environment:
+        ConnectionStrings__DefaultConnection: Host=postgres_users;Port=5432;Database=${USERS_DB};Username=${USERS_USER};Password=${USERS_PASSWORD}
+    ports:
+      - "7113:80"
+    depends_on:
+        usersservice_migrations:
+          condition: service_completed_successfully
+
+        kafka:
+          condition: service_healthy
+
+        kafka_init:
+          condition: service_completed_successfully
+    healthcheck:
+        test:
+          [
+            "CMD-SHELL",
+            "curl -f http://localhost/health || exit 1"
+          ]
+        interval: 10s
+        timeout: 3s
+        retries: 5
+        start_period: 20s
+    stop_grace_period: 30s
+
+  postsservice_migrations:
+    build:
+      context: ./PostsService/PostsService
+      dockerfile: Dockerfile
+    command:
+      - dotnet
+      - PostsService.dll
+      - --migrate
+    restart: "no"
+    depends_on:
+      postgres_posts:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      ConnectionStrings__DefaultConnection: Host=postgres_posts;Port=5432;Database=${POSTS_DB};Username=${POSTS_USER};Password=${POSTS_PASSWORD}
+    networks:
+      - appnet
+
+  postsservice:
+    <<: *dotnet-service
+    build:
+        context: ./PostsService/PostsService
+        dockerfile: Dockerfile
+    environment:
+        ConnectionStrings__DefaultConnection: Host=postgres_posts;Port=5432;Database=${POSTS_DB};Username=${POSTS_USER};Password=${POSTS_PASSWORD}
+    ports:
+      - "7245:80"
+    depends_on:
+        postsservice_migrations:
+          condition: service_completed_successfully
+
+        kafka:
+          condition: service_healthy
+
+        kafka_init:
+          condition: service_completed_successfully
+
+    healthcheck:
+        test:
+          [
+            "CMD-SHELL",
+            "curl -f http://localhost/health || exit 1"
+          ]
+        interval: 10s
+        timeout: 3s
+        retries: 5
+        start_period: 20s
+
+    stop_grace_period: 30s
+  
+  react_web_client:
+    <<: *web-service
+    build: 
+        context: ./ReactWebClient
+    ports:
+      - "5173:80"
+    depends_on:
+        - usersservice
+        - postsservice
+    
