@@ -8,6 +8,11 @@ RUN dotnet restore
 RUN dotnet publish -c "$BUILD_CONFIGURATION" -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:$DOTNET_VERSION AS runtime
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY --from=build /app/publish .
 

@@ -1,0 +1,119 @@
+services:
+
+    prometheus:
+        image: prom/prometheus:${PROMETHEUS_VERSION}
+        networks:
+          - appnet
+        ports:
+          - "9090:9090"
+        volumes:
+          - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+        depends_on:
+          - usersservice
+          - postsservice
+        restart: unless-stopped
+
+    grafana:
+        image: grafana/grafana:${GRAFANA_VERSION}
+        networks:
+          - appnet
+        ports:
+          - "3000:3000"
+        depends_on:
+          - prometheus
+        restart: unless-stopped
+
+    jaeger:
+        image: jaegertracing/all-in-one:${JAEGER_VERSION}
+        restart: unless-stopped
+        ports:
+          - "16686:16686"    # UI
+          - "6831:6831/udp"  # agent
+        networks:
+          - appnet
+
+    elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+        environment:
+          - discovery.type=single-node
+          - xpack.security.enabled=false
+          - ES_JAVA_OPTS=-Xms512m -Xmx512m
+        restart: unless-stopped
+        ports:
+          - "9200:9200"
+        mem_limit: 1g
+        networks:
+          - appnet
+        volumes:
+          - es_data:/usr/share/elasticsearch/data
+        logging:
+            driver: json-file
+            options:
+              max-size: "20m"
+              max-file: "5"
+        healthcheck:
+          test: ["CMD-SHELL", "curl -s http://localhost:9200 || exit 1"]
+          interval: 30s
+          timeout: 10s
+          retries: 5
+
+    kibana:
+        image: docker.elastic.co/kibana/kibana:${ELASTIC_VERSION}
+        depends_on:
+          elasticsearch:
+            condition: service_healthy
+        ports:
+          - "5601:5601"
+        restart: unless-stopped
+        environment:
+          - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+        networks:
+          - appnet
+
+    filebeat:
+        image: docker.elastic.co/beats/filebeat:${ELASTIC_VERSION}
+        user: root
+        command:
+          - filebeat
+          - -e
+          - --strict.perms=false
+        networks:
+          - appnet
+        depends_on:
+          elasticsearch:
+            condition: service_healthy
+        volumes:
+          - /var/lib/docker/containers:/var/lib/docker/containers:ro
+          - /var/run/docker.sock:/var/run/docker.sock:ro
+          - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+    
+    kafka_ui:
+        image: docker.redpanda.com/redpandadata/console:${KAFKA_UI_VERSION}
+        restart: unless-stopped
+        ports:
+          - "8080:8080"
+        networks:
+          - appnet
+        environment:
+          KAFKA_BROKERS: kafka:9092
+        depends_on:
+          kafka:
+            condition: service_healthy
+        
+    kafka_exporter:
+        image: danielqsj/kafka-exporter:${KAFKA_EXPORTER_VERSION}
+        restart: unless-stopped
+        ports:
+          - "9308:9308"
+        networks:
+          - appnet
+        command:
+          - "--kafka.server=kafka:9092"
+        depends_on:
+          kafka:
+            condition: service_healthy
+
+volumes:
+  es_data:
+
+    

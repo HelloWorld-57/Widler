@@ -1,23 +1,65 @@
+
+
 dotnet ef migrations add Initial
 ----------------------------------------------
 
+# Только инфраструктура
+docker compose -f compose.yml up
+
+# Инфраструктура + приложение
+docker compose -f compose.yml -f compose.app.yml up
+
+# Полный стек с мониторингом	
+docker compose \
+  -f compose.yml \
+  -f compose.app.yml \
+  -f compose.observability.yml up -d
+  
+docker compose \
+  -f compose.yml \
+  -f compose.app.yml \
+  -f compose.observability.yml down
+  
+# если хотим собрать только один сервис
+docker compose \
+  -f compose.yml \
+  -f compose.app.yml \
+  build usersservice
 ----------------------------------------------
 
 ----------------------------------------------
+docker compose build --no-cache
+docker compose build
+----------------------------------------------
+docker compose up --build
+docker compose up
+----------------------------------------------
+docker compose down --volumes
+docker compose down
+----------------------------------------------
+docker compose stop
+docker compose start
+----------------------------------------------
+docker compose -f compose.yml -f compose.app.yml -f compose.observability.yml config
+docker compose -f compose.yml -f compose.app.yml -f compose.observability.yml config --services
+docker compose -f compose.yml -f compose.app.yml -f compose.observability.yml config | Select-String -Pattern "api_gateway|react_web_client|8081|5173"
+docker compose -f compose.yml -f compose.app.yml -f compose.observability.yml build api_gateway react_web_client
+docker compose -f compose.yml -f compose.app.yml -f compose.observability.yml up api_gateway react_web_client
+----------------------------------------------
+docker compose up --scale usersservice=3
+----------------------------------------------
+уже разделение на файлы и это не нужно
 
+поднимаем только микросервисы
+docker compose up
+
+поднимаем вместе с мониторингом
+docker compose --profile observability up
+----------------------------------------------
+curl -i http://localhost:8081/api/v1/users
+curl -i http://localhost:5173/api/v1/users
 ----------------------------------------------
 
-----------------------------------------------
-
-----------------------------------------------
-
-----------------------------------------------
-
-----------------------------------------------
-
-----------------------------------------------
-
-----------------------------------------------
 
 ----------------------------------------------
 
