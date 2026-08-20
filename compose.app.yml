@@ -42,8 +42,6 @@ services:
         dockerfile: Dockerfile
     environment:
         ConnectionStrings__DefaultConnection: Host=postgres_users;Port=5432;Database=${USERS_DB};Username=${USERS_USER};Password=${USERS_PASSWORD}
-    ports:
-      - "7113:80"
     depends_on:
         usersservice_migrations:
           condition: service_completed_successfully
@@ -90,8 +88,6 @@ services:
         dockerfile: Dockerfile
     environment:
         ConnectionStrings__DefaultConnection: Host=postgres_posts;Port=5432;Database=${POSTS_DB};Username=${POSTS_USER};Password=${POSTS_PASSWORD}
-    ports:
-      - "7245:80"
     depends_on:
         postsservice_migrations:
           condition: service_completed_successfully
@@ -115,6 +111,27 @@ services:
 
     stop_grace_period: 30s
   
+  
+  api_gateway:
+    build:
+      context: ./ApiGateway
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - appnet
+    ports:
+      - "8081:80"
+    depends_on:
+      usersservice:
+        condition: service_healthy
+      postsservice:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5      
+      
   react_web_client:
     <<: *web-service
     build: 
@@ -122,6 +139,5 @@ services:
     ports:
       - "5173:80"
     depends_on:
-        - usersservice
-        - postsservice
-    
+      api_gateway:
+        condition: service_healthy

@@ -40,7 +40,11 @@ docker compose down
 docker compose stop
 docker compose start
 ----------------------------------------------
-
+docker compose -f compose.yml -f compose.app.yml -f compose.observability.yml config
+docker compose -f compose.yml -f compose.app.yml -f compose.observability.yml config --services
+docker compose -f compose.yml -f compose.app.yml -f compose.observability.yml config | Select-String -Pattern "api_gateway|react_web_client|8081|5173"
+docker compose -f compose.yml -f compose.app.yml -f compose.observability.yml build api_gateway react_web_client
+docker compose -f compose.yml -f compose.app.yml -f compose.observability.yml up api_gateway react_web_client
 ----------------------------------------------
 docker compose up --scale usersservice=3
 ----------------------------------------------
@@ -52,7 +56,8 @@ docker compose up
 поднимаем вместе с мониторингом
 docker compose --profile observability up
 ----------------------------------------------
-
+curl -i http://localhost:8081/api/v1/users
+curl -i http://localhost:5173/api/v1/users
 ----------------------------------------------
 
 
