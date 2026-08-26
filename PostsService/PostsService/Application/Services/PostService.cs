@@ -12,12 +12,25 @@ namespace PostsService.Application.Services
     {
         private readonly IPostRepository _repo;
         private readonly IValidatorRunner _validator;
+        private readonly ICurrentUser _currentUser;
+        private readonly IPostAuthorization _authorization;
 
-        public PostService(IPostRepository repo, IValidatorRunner validator)
+        public PostService(IPostRepository repo, IValidatorRunner validator, ICurrentUser currentUser, IPostAuthorization authorization)
         {
             _repo = repo;
             _validator = validator;
+            _currentUser = currentUser;
+            _authorization = authorization;
         }
+
+        //if (currentUser.IsInRole("admin")){}
+
+        //if (currentUser.IsInRole("moderator"))
+
+        //if (post.AuthorId != currentUser.Id)
+        //{
+        //    throw new ForbiddenException();
+        //}
 
         public async Task<IReadOnlyCollection<PostResponse>> GetAllAsync()
         {
@@ -52,7 +65,7 @@ namespace PostsService.Application.Services
             var post = new Post(
                 cmd.Caption,
                 cmd.Content,
-                cmd.UserId
+                _currentUser.Id.ToString()
             );
 
             await _repo.AddAsync(post);
@@ -71,6 +84,11 @@ namespace PostsService.Application.Services
             var post = await _repo.GetByIdAsync(cmd.PostId)
                 ?? throw new NotFoundException(nameof(Post), cmd.PostId);
 
+            if (!_authorization.CanUpdate(post))
+            {
+                throw new ForbiddenException();
+            }
+
             post.Update(cmd.Caption, cmd.Content);
 
             await _repo.SaveChangesAsync();
@@ -86,6 +104,11 @@ namespace PostsService.Application.Services
             var post = await _repo.GetByIdAsync(cmd.PostId) 
                 ?? throw new NotFoundException(nameof(Post), cmd.PostId);
 
+            if (!_authorization.CanUpdate(post))
+            {
+                throw new ForbiddenException();
+            }
+
             post.Replace(cmd.Caption, cmd.Content);
 
             await _repo.SaveChangesAsync();
@@ -98,6 +121,11 @@ namespace PostsService.Application.Services
 
             var post = await _repo.GetByIdAsync(id)
                 ?? throw new NotFoundException(nameof(Post), id);
+            
+            if (!_authorization.CanDelete(post))
+            {
+                throw new ForbiddenException();
+            }
 
             post.Delete();
 

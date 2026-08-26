@@ -21,6 +21,7 @@ using PostsService.Infrastructure.Messaging.Kafka.Processing;
 using PostsService.Infrastructure.Messaging.Kafka.Producer;
 using PostsService.Infrastructure.Messaging.Kafka.Routing;
 using PostsService.Infrastructure.Middleware;
+using PostsService.Infrastructure.Security;
 using PostsService.Infrastructure.Telemetry;
 using Serilog;
 using Serilog.Context;
@@ -119,6 +120,11 @@ builder.Services.AddValidatorsFromAssemblyContaining<UpdatePostCommandValidator>
 builder.Services.AddScoped<IValidatorRunner, ValidatorRunner>();
 
 builder.Services.AddControllers();
+
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+builder.Services.AddScoped<IPostAuthorization, PostAuthorization>();
 
 builder.Services.AddOpenApi();
 

@@ -1,0 +1,217 @@
+{
+  "realm": "widler",
+  "enabled": true,
+  "displayName": "Widler",
+
+  "registrationAllowed": true,
+  "resetPasswordAllowed": true,
+  "rememberMe": true,
+
+  "roles": {
+    "realm": [
+	  {
+        "name": "user",
+        "description": "Regular Widler user",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "admin",
+        "description": "Widler administrator",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "moderator",
+        "description": "Widler moderator",
+		"composite": false,
+        "clientRole": false
+      }
+    ]
+  },
+
+  "clientScopes": [
+	{
+	  "name": "widler-user",
+	  "description": "Widler user information",
+	  "protocol": "openid-connect",
+	  "attributes": {
+		"include.in.token.scope": "true",
+		"display.on.consent.screen": "false"
+	  },
+	  "protocolMappers": [
+		{
+		  "name": "subject",
+		  "protocol": "openid-connect",
+		  "protocolMapper": "oidc-sub-mapper",
+		  "config": {
+			"access.token.claim": "true",
+			"id.token.claim": "true",
+			"userinfo.token.claim": true
+		  }
+		},
+		{
+		  "name": "preferred-username",
+		  "protocol": "openid-connect",
+		  "protocolMapper": "oidc-usermodel-property-mapper",
+		  "config": {
+			"user.attribute": "username",
+			"claim.name": "preferred_username",
+			"jsonType.label": "String",
+			"id.token.claim": "true",
+			"access.token.claim": "true",
+			"userinfo.token.claim": "true"
+		  }
+		},
+		{
+		  "name": "email",
+		  "protocol": "openid-connect",
+		  "protocolMapper": "oidc-usermodel-property-mapper",
+		  "config": {
+			"user.attribute": "email",
+			"claim.name": "email",
+			"jsonType.label": "String",
+			"id.token.claim": "true",
+			"access.token.claim": "true",
+			"userinfo.token.claim": "true"
+		  }
+		}
+	  ]
+	},
+	{
+	  "name": "widler-roles",
+	  "description": "Widler application roles",
+	  "protocol": "openid-connect",
+	  "attributes": {
+		"include.in.token.scope": "true",
+		"display.on.consent.screen": "false"
+	  },
+	  "protocolMappers": [
+		{
+		  "name": "realm-roles",
+		  "protocol": "openid-connect",
+		  "protocolMapper": "oidc-usermodel-realm-role-mapper",
+		  "config": {
+			"claim.name": "roles",
+			"jsonType.label": "String",
+			"multivalued": "true",
+			"id.token.claim": "false",
+			"access.token.claim": "true",
+			"userinfo.token.claim": "false"
+		  }
+		}
+	  ]
+	},
+    {
+      "name": "widler-api",
+      "description": "Audience for Widler API",
+      "protocol": "openid-connect",
+
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+
+      "protocolMappers": [
+        {
+          "name": "widler-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+
+          "config": {
+            "included.client.audience": "widler-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+
+  "clients": [
+    {
+      "clientId": "widler-web",
+      "name": "Widler Web",
+      "description": "Widler React web application",
+
+      "enabled": true,
+      "protocol": "openid-connect",
+
+      "publicClient": true,
+
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+
+      "redirectUris": [
+        "http://localhost:5173/*"
+      ],
+
+      "webOrigins": [
+        "http://localhost:5173"
+      ],
+
+      "defaultClientScopes": [
+		"openid",
+	    "widler-user",
+	    "widler-roles",
+		"widler-api"
+      ]
+    },
+
+    {
+      "clientId": "widler-api",
+      "name": "Widler API",
+      "description": "Widler API",
+
+      "enabled": true,
+      "protocol": "openid-connect",
+
+      "publicClient": true,
+
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false
+    }
+  ],
+  
+  "users": [
+    {
+	  "username": "test",
+	  "enabled": true,
+	  "email": "test@gmail.com",
+	  "emailVerified": true,
+	  "firstName": "Test",
+	  "lastName": "User",
+	  "credentials": [
+	    {
+		  "type": "password",
+		  "value": "test",
+		  "temporary": false
+	    }
+	  ],
+	  "realmRoles": [
+	    "user"
+	  ]
+    },
+    {
+	  "username": "admin",
+	  "enabled": true,
+	  "email": "admin@gmail.com",
+	  "emailVerified": true,
+	  "firstName": "Admin",
+	  "lastName": "User",
+	  "credentials": [
+	    {
+		  "type": "password",
+		  "value": "Admin123",
+		  "temporary": false
+	    }
+	  ],
+	  "realmRoles": [
+	    "user",
+	    "admin"
+	  ]
+    }
+  ]
+}

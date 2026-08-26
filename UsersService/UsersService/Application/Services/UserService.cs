@@ -5,6 +5,7 @@ using UsersService.Application.Validation;
 using UsersService.Domain.Entities;
 using UsersService.DTOs.Response;
 using UsersService.Infrastructure.Telemetry;
+using static UsersService.Infrastructure.Messaging.Kafka.Events.IntegrationEventNames;
 
 namespace UsersService.Application.Services
 {
@@ -12,11 +13,15 @@ namespace UsersService.Application.Services
     {
         private readonly IUserRepository _repo;
         private readonly IValidatorRunner _validator;
+        private readonly ICurrentUser _currentUser;
+        private readonly IUserAuthorization _authorization;
 
-        public UserService(IUserRepository repo, IValidatorRunner validator)
+        public UserService(IUserRepository repo, IValidatorRunner validator, ICurrentUser currentUser, IUserAuthorization authorization)
         {
             _repo = repo;
             _validator = validator;
+            _currentUser = currentUser;
+            _authorization = authorization;
         }
 
         public async Task<IReadOnlyCollection<UserResponse>> GetAllAsync()
@@ -72,6 +77,11 @@ namespace UsersService.Application.Services
             var user = await _repo.GetByIdAsync(cmd.UserId)
                 ?? throw new NotFoundException(nameof(User), cmd.UserId);
 
+            if (!_authorization.CanUpdate(user))
+            {
+                throw new ForbiddenException();
+            }
+
             user.Update(cmd.Name, cmd.SecondName, cmd.Email, cmd.BirthDate);
 
             await _repo.SaveChangesAsync();
@@ -87,6 +97,11 @@ namespace UsersService.Application.Services
             var user = await _repo.GetByIdAsync(cmd.UserId) 
                 ?? throw new NotFoundException(nameof(User), cmd.UserId);
 
+            if (!_authorization.CanUpdate(user))
+            {
+                throw new ForbiddenException();
+            }
+
             user.Replace(cmd.Name, cmd.SecondName, cmd.Email, cmd.BirthDate);
 
             await _repo.SaveChangesAsync();
@@ -99,6 +114,11 @@ namespace UsersService.Application.Services
 
             var user = await _repo.GetByIdAsync(id)
                 ?? throw new NotFoundException(nameof(User), id);
+
+            if (!_authorization.CanDelete(user))
+            {
+                throw new ForbiddenException();
+            }
 
             user.Delete();
 

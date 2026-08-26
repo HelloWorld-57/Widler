@@ -23,6 +23,7 @@ using UsersService.Infrastructure.Messaging.Kafka.Processing;
 using UsersService.Infrastructure.Messaging.Kafka.Producer;
 using UsersService.Infrastructure.Messaging.Kafka.Routing;
 using UsersService.Infrastructure.Middleware;
+using UsersService.Infrastructure.Security;
 using UsersService.Infrastructure.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -118,6 +119,10 @@ builder.Services.AddValidatorsFromAssemblyContaining<UpdateUserCommandValidator>
 builder.Services.AddScoped<IValidatorRunner, ValidatorRunner>();
 
 builder.Services.AddControllers();
+
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
 builder.Services.AddOpenApi();
 

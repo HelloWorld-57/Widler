@@ -13,10 +13,12 @@ namespace UsersService.Controllers
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly ICurrentUser _currentUser;
 
-        public UsersController(IUserService userService)
+        public UsersController(IUserService userService, ICurrentUser currentUser)
         {
             _userService = userService;
+            _currentUser = currentUser;
         }
 
         // GET api/users

@@ -2,7 +2,6 @@
 {
     public record CreatePostRequest(
         string Caption,
-        string Content,
-        string UserId
+        string Content
     );
 }
