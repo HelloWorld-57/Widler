@@ -23,6 +23,7 @@ using UsersService.Infrastructure.Messaging.Kafka.Processing;
 using UsersService.Infrastructure.Messaging.Kafka.Producer;
 using UsersService.Infrastructure.Messaging.Kafka.Routing;
 using UsersService.Infrastructure.Middleware;
+using UsersService.Infrastructure.Observability;
 using UsersService.Infrastructure.Security;
 using UsersService.Infrastructure.Telemetry;
 
@@ -121,8 +122,10 @@ builder.Services.AddScoped<IValidatorRunner, ValidatorRunner>();
 builder.Services.AddControllers();
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICorrelationContext, CorrelationContext>();
 
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+builder.Services.AddScoped<IUserAuthorization, UserAuthorization>();
 
 builder.Services.AddOpenApi();
 
@@ -147,11 +150,13 @@ app.MapPrometheusScrapingEndpoint();
 
 app.Use(async (context, next) =>
 {
-    var traceId =
-        Activity.Current?.TraceId.ToString()
+    var traceId = Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier;
+
+    var correlationId = context.Request.Headers[CorrelationHeaders.CorrelationId].FirstOrDefault()
         ?? context.TraceIdentifier;
 
     using (LogContext.PushProperty("TraceId", traceId))
+    using (LogContext.PushProperty("CorrelationId", correlationId))
     {
         await next();
     }

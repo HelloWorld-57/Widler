@@ -1,8 +1,53 @@
+using ApiGateway.Infrastructure.Observability;
+using ApiGateway.Infrastructure.Telemetry;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Serilog;
+using Serilog.Formatting.Json;
 using Yarp.ReverseProxy.Transforms;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("service.name", "ApiGateway")
+    .WriteTo.Console(new JsonFormatter())
+    .CreateLogger();
+
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing =>
+    {
+        tracing
+            .SetResourceBuilder(
+                ResourceBuilder.CreateDefault()
+                    .AddService("ApiGateway")
+            )
+            .AddSource(Tracing.SourceName)
+            .AddAspNetCoreInstrumentation(options =>
+            {
+                options.RecordException = true;
+            })
+            .AddHttpClientInstrumentation()
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://jaeger:4317");
+            });
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddMeter("ApiGateway")
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddPrometheusExporter();
+    });
+
+builder.Host.UseSerilog();
 
 var keycloakAuthority = builder.Configuration["Keycloak:Authority"]
     ?? throw new InvalidOperationException(
@@ -144,6 +189,16 @@ builder.Services
             transformContext.ProxyRequest.Headers.Remove("X-User-Id");
             transformContext.ProxyRequest.Headers.Remove("X-User-Name");
             transformContext.ProxyRequest.Headers.Remove("X-User-Roles");
+            transformContext.ProxyRequest.Headers.Remove(CorrelationHeaders.CorrelationId);
+
+            var correlationId = transformContext.HttpContext.Items[CorrelationHeaders.CorrelationId]?.ToString();
+
+            if (!string.IsNullOrWhiteSpace(correlationId))
+            {
+                transformContext.ProxyRequest.Headers.TryAddWithoutValidation(
+                    CorrelationHeaders.CorrelationId,
+                    correlationId);
+            }
 
             if (user.Identity?.IsAuthenticated != true)
             {
@@ -152,7 +207,7 @@ builder.Services
 
             var userId = user.FindFirst("sub")?.Value;
             var username = user.FindFirst("preferred_username")?.Value;
-
+            
             var roles = user
                 .FindAll("roles")
                 .Select(x => x.Value);
@@ -180,6 +235,12 @@ builder.Services
     });
 
 var app = builder.Build();
+
+app.UseSerilogRequestLogging();
+
+app.MapPrometheusScrapingEndpoint();
+
+app.UseMiddleware<CorrelationIdMiddleware>();
 
 app.UseCors("ReactClient");
 

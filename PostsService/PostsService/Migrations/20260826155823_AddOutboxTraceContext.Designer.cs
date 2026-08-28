@@ -2,18 +2,21 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using UsersService.Infrastructure.Db;
+using PostsService.Infrastructure.Db;
 
 #nullable disable
 
-namespace UsersService.Migrations
+namespace PostsService.Migrations
 {
-    [DbContext(typeof(UsersDbContext))]
-    partial class UsersDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(PostsDbContext))]
+    [Migration("20260826155823_AddOutboxTraceContext")]
+    partial class AddOutboxTraceContext
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,15 +25,21 @@ namespace UsersService.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("UsersService.Domain.Entities.User", b =>
+            modelBuilder.Entity("PostsService.Domain.Entities.Post", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("text")
                         .HasColumnName("id");
 
-                    b.Property<DateTime>("BirthDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("birth_date");
+                    b.Property<string>("Caption")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("caption");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone")
@@ -40,32 +49,22 @@ namespace UsersService.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("email");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("name");
-
-                    b.Property<string>("SecondName")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("second_name");
+                        .HasColumnName("user_id");
 
                     b.HasKey("Id")
-                        .HasName("pk_users");
+                        .HasName("pk_posts");
 
-                    b.ToTable("users", (string)null);
+                    b.ToTable("posts", (string)null);
                 });
 
-            modelBuilder.Entity("UsersService.Infrastructure.Db.Inbox.ProcessedMessage", b =>
+            modelBuilder.Entity("PostsService.Infrastructure.Db.Inbox.ProcessedMessage", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("text")
@@ -94,7 +93,7 @@ namespace UsersService.Migrations
                     b.ToTable("processed_messages", (string)null);
                 });
 
-            modelBuilder.Entity("UsersService.Infrastructure.Db.Outbox.OutboxMessage", b =>
+            modelBuilder.Entity("PostsService.Infrastructure.Db.Outbox.OutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -104,10 +103,6 @@ namespace UsersService.Migrations
                     b.Property<int>("Attempts")
                         .HasColumnType("integer")
                         .HasColumnName("attempts");
-
-                    b.Property<string>("CorrelationId")
-                        .HasColumnType("text")
-                        .HasColumnName("correlation_id");
 
                     b.Property<string>("EventType")
                         .IsRequired()
