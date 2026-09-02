@@ -1,4 +1,5 @@
-﻿using UsersService.Application.Interfaces;
+﻿using System.Security.Claims;
+using UsersService.Application.Interfaces;
 
 namespace UsersService.Infrastructure.Security
 {
@@ -11,13 +12,16 @@ namespace UsersService.Infrastructure.Security
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public bool IsAuthenticated => _httpContextAccessor.HttpContext?.Request.Headers.ContainsKey("X-User-Id") == true;
+        private ClaimsPrincipal? Principal => _httpContextAccessor.HttpContext?.User;
+
+
+        public bool IsAuthenticated => Principal?.Identity?.IsAuthenticated == true;
 
         public Guid Id
         {
             get
             {
-                var value = GetHeader("X-User-Id");
+                var value = Principal?.FindFirstValue("sub");
 
                 if (!Guid.TryParse(value, out var id))
                 {
@@ -28,38 +32,21 @@ namespace UsersService.Infrastructure.Security
             }
         }
 
-        public string Username => GetHeader("X-User-Name") ?? string.Empty;
+        public string Username => Principal?.FindFirstValue("preferred_username") ?? string.Empty;
 
-        public IReadOnlyCollection<string> Roles
-        {
-            get
-            {
-                var value = GetHeader("X-User-Roles");
+        public string Email => Principal?.FindFirstValue("email") ?? string.Empty;
 
-                if (string.IsNullOrWhiteSpace(value))
-                {
-                    return [];
-                }
-
-                return value
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(x => x.Trim())
-                    .ToArray();
-            }
-        }
+        public IReadOnlyCollection<string> Roles =>
+            Principal?
+                .FindAll("roles")
+                .Select(x => x.Value)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToArray()
+            ?? [];
 
         public bool IsInRole(string role)
         {
-            return Roles.Contains(role, StringComparer.OrdinalIgnoreCase);
-        }
-
-        private string? GetHeader(string name)
-        {
-            return _httpContextAccessor
-                .HttpContext?
-                .Request
-                .Headers[name]
-                .FirstOrDefault();
+            return Principal?.IsInRole(role) == true;
         }
     }
 }

@@ -50,19 +50,15 @@ builder.Services.AddOpenTelemetry()
 builder.Host.UseSerilog();
 
 var keycloakAuthority = builder.Configuration["Keycloak:Authority"]
-    ?? throw new InvalidOperationException(
-        "Keycloak:Authority is not configured.");
+    ?? throw new InvalidOperationException("Keycloak:Authority is not configured.");
 
 var keycloakAudience = builder.Configuration["Keycloak:Audience"]
-    ?? throw new InvalidOperationException(
-        "Keycloak:Audience is not configured.");
+    ?? throw new InvalidOperationException("Keycloak:Audience is not configured.");
 
 var keycloakIssuer = builder.Configuration["Keycloak:Issuer"]
-    ?? throw new InvalidOperationException(
-        "Keycloak:Issuer is not configured.");
+    ?? throw new InvalidOperationException("Keycloak:Issuer is not configured.");
 
-var requireHttpsMetadata =
-    builder.Configuration.GetValue<bool>("Keycloak:RequireHttpsMetadata");
+var requireHttpsMetadata = builder.Configuration.GetValue<bool>("Keycloak:RequireHttpsMetadata");
 
 builder.Services.AddCors(options =>
 {
@@ -186,10 +182,10 @@ builder.Services
             Console.WriteLine("============================");
 
             // Удаляем headers, которые мог прислать клиент
-            transformContext.ProxyRequest.Headers.Remove("X-User-Id");
-            transformContext.ProxyRequest.Headers.Remove("X-User-Name");
-            transformContext.ProxyRequest.Headers.Remove("X-User-Roles");
-            transformContext.ProxyRequest.Headers.Remove(CorrelationHeaders.CorrelationId);
+            //transformContext.ProxyRequest.Headers.Remove("X-User-Id");
+            //transformContext.ProxyRequest.Headers.Remove("X-User-Name");
+            //transformContext.ProxyRequest.Headers.Remove("X-User-Roles");
+            //transformContext.ProxyRequest.Headers.Remove(CorrelationHeaders.CorrelationId);
 
             var correlationId = transformContext.HttpContext.Items[CorrelationHeaders.CorrelationId]?.ToString();
 
@@ -200,35 +196,35 @@ builder.Services
                     correlationId);
             }
 
-            if (user.Identity?.IsAuthenticated != true)
-            {
-                return ValueTask.CompletedTask;
-            }
+            //if (user.Identity?.IsAuthenticated != true)
+            //{
+            //    return ValueTask.CompletedTask;
+            //}
 
-            var userId = user.FindFirst("sub")?.Value;
-            var username = user.FindFirst("preferred_username")?.Value;
+            //var userId = user.FindFirst("sub")?.Value;
+            //var username = user.FindFirst("preferred_username")?.Value;
             
-            var roles = user
-                .FindAll("roles")
-                .Select(x => x.Value);
+            //var roles = user
+            //    .FindAll("roles")
+            //    .Select(x => x.Value);
 
-            if (!string.IsNullOrEmpty(userId))
-            {
-                transformContext.ProxyRequest.Headers.TryAddWithoutValidation(
-                    "X-User-Id",
-                    userId);
-            }
+            //if (!string.IsNullOrEmpty(userId))
+            //{
+            //    transformContext.ProxyRequest.Headers.TryAddWithoutValidation(
+            //        "X-User-Id",
+            //        userId);
+            //}
 
-            if (!string.IsNullOrEmpty(username))
-            {
-                transformContext.ProxyRequest.Headers.TryAddWithoutValidation(
-                    "X-User-Name",
-                    username);
-            }
+            //if (!string.IsNullOrEmpty(username))
+            //{
+            //    transformContext.ProxyRequest.Headers.TryAddWithoutValidation(
+            //        "X-User-Name",
+            //        username);
+            //}
 
-            transformContext.ProxyRequest.Headers.TryAddWithoutValidation(
-                "X-User-Roles",
-                string.Join(",", roles));
+            //transformContext.ProxyRequest.Headers.TryAddWithoutValidation(
+            //    "X-User-Roles",
+            //    string.Join(",", roles));
 
             return ValueTask.CompletedTask;
         });

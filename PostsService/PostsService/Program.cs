@@ -1,6 +1,8 @@
 using Asp.Versioning;
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -87,6 +89,17 @@ builder.Services.AddApiVersioning(options =>
 
 builder.Host.UseSerilog();
 
+var keycloakAuthority = builder.Configuration["Keycloak:Authority"]
+    ?? throw new InvalidOperationException("Keycloak:Authority is not configured.");
+
+var keycloakAudience = builder.Configuration["Keycloak:Audience"]
+    ?? throw new InvalidOperationException("Keycloak:Audience is not configured.");
+
+var keycloakIssuer = builder.Configuration["Keycloak:Issuer"]
+    ?? throw new InvalidOperationException("Keycloak:Issuer is not configured.");
+
+var requireHttpsMetadata = builder.Configuration.GetValue<bool>("Keycloak:RequireHttpsMetadata");
+
 builder.Services.AddScoped<OutboxSaveChangesInterceptor>();
 builder.Services.AddDbContext<PostsDbContext>((sp, options) =>
 {
@@ -143,6 +156,61 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = keycloakAuthority;
+        options.Audience = keycloakAudience;
+
+        options.RequireHttpsMetadata = requireHttpsMetadata;
+
+        options.MapInboundClaims = false;
+
+        options.TokenValidationParameters =
+            new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+
+                ValidIssuer = keycloakIssuer,
+                ValidAudience = keycloakAudience,
+
+                RoleClaimType = "roles",
+
+                ClockSkew = TimeSpan.FromSeconds(30)
+            };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Authenticated", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+    });
+
+    options.AddPolicy("Admin", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole("admin");
+    });
+
+    options.AddPolicy("Moderator", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole("moderator");
+    });
+
+    // Admin OR moderator
+    options.AddPolicy("AdminOrModerator", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole("admin", "moderator");
+    });
+});
+
 var app = builder.Build();
 
 app.UseSerilogRequestLogging();
@@ -188,6 +256,7 @@ app.UseCors("AllowReactViteFrontend");
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

@@ -59,6 +59,11 @@ namespace UsersService.Migrations
                         .HasColumnType("text")
                         .HasColumnName("second_name");
 
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("username");
+
                     b.HasKey("Id")
                         .HasName("pk_users");
 

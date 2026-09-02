@@ -19,6 +19,9 @@ namespace UsersService.Migrations
                     event_type = table.Column<string>(type: "text", nullable: false),
                     payload = table.Column<string>(type: "text", nullable: false),
                     occurred_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    trace_parent = table.Column<string>(type: "text", nullable: true),
+                    trace_state = table.Column<string>(type: "text", nullable: true),
+                    correlation_id = table.Column<string>(type: "text", nullable: true),
                     locked_until = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     processed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     attempts = table.Column<int>(type: "integer", nullable: false)
@@ -48,9 +51,10 @@ namespace UsersService.Migrations
                 columns: table => new
                 {
                     id = table.Column<string>(type: "text", nullable: false),
+                    email = table.Column<string>(type: "text", nullable: false),
+                    username = table.Column<string>(type: "text", nullable: false),
                     name = table.Column<string>(type: "text", nullable: false),
                     second_name = table.Column<string>(type: "text", nullable: false),
-                    email = table.Column<string>(type: "text", nullable: false),
                     birth_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     creation_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     is_deleted = table.Column<bool>(type: "boolean", nullable: false),

@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PostsService.Application.Commands;
 using PostsService.Application.Interfaces;
@@ -9,6 +10,7 @@ using PostsService.Infrastructure.Security;
 namespace PostsService.Controllers
 {
     [ApiController]
+    [Authorize]
     [ApiVersion("1.0")]
     [Route("api/v{version:apiVersion}/posts")]
     public class PostsController : ControllerBase
@@ -94,17 +96,18 @@ namespace PostsService.Controllers
         }
 
         // debug
-        //[HttpGet("cu")]
-        //public IActionResult CurrentUser()
-        //{
-        //    return Ok(new
-        //    {
-        //        IsAuthenticated = _currentUser.IsAuthenticated,
-        //        UserId = _currentUser.Id,
-        //        Username = _currentUser.Username,
-        //        Roles = _currentUser.Roles
-        //    });
-        //}
+        [HttpGet("cu")]
+        public IActionResult CurrentUser()
+        {
+            return Ok(new
+            {
+                IsAuthenticated = _currentUser.IsAuthenticated,
+                UserId = _currentUser.Id,
+                Username = _currentUser.Username,
+                email = _currentUser.Email,
+                Roles = _currentUser.Roles
+            });
+        }
 
     }
 }

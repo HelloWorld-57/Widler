@@ -22,19 +22,13 @@ namespace UsersService.Application.Validation
                 .MaximumLength(200)
                 .When(x => x.SecondName is not null);
 
-            RuleFor(x => x.Email)
-                .Cascade(CascadeMode.Stop)
-                .NotEmpty()
-                .MaximumLength(200)
-                .When(x => x.Email is not null);
-
             RuleFor(x => x.BirthDate)
                 .Cascade(CascadeMode.Stop)
                 .NotEmpty()
                 .When(x => x.BirthDate is not null);
 
             RuleFor(x => x)
-                .Must(x => x.Name is not null || x.SecondName is not null || x.Email is not null || x.BirthDate is not null)
+                .Must(x => x.Name is not null || x.SecondName is not null || x.BirthDate is not null)
                 .WithMessage("At least one field must be provided");
         }
     }

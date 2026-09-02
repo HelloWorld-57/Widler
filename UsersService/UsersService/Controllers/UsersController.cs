@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UsersService.Application.Commands;
 using UsersService.Application.Interfaces;
@@ -8,6 +9,7 @@ using UsersService.DTOs.Response;
 namespace UsersService.Controllers
 {
     [ApiController]
+    [Authorize]
     [ApiVersion("1.0")]
     [Route("api/v{version:apiVersion}/users")]
     public class UsersController : ControllerBase
@@ -43,10 +45,9 @@ namespace UsersService.Controllers
         {
             var userId = await _userService.CreateAsync(
                 new CreateUserCommand(
-                    request.Name,
-                    request.SecondName,
-                    request.Email,
-                    request.BirthDate
+                    request.Id,
+                    request.Username,
+                    request.Email
                 )
             );
 
@@ -66,7 +67,6 @@ namespace UsersService.Controllers
                     id,
                     request.Name,
                     request.SecondName,
-                    request.Email,
                     request.BirthDate
                 )
             );
@@ -83,7 +83,6 @@ namespace UsersService.Controllers
                     id,
                     request.Name,
                     request.SecondName,
-                    request.Email,
                     request.BirthDate
                 )
             );

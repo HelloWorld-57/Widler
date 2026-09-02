@@ -24,7 +24,6 @@ namespace PostsService.Application.Services
         }
 
         //if (currentUser.IsInRole("admin")){}
-
         //if (currentUser.IsInRole("moderator"))
 
         //if (post.AuthorId != currentUser.Id)

@@ -55,10 +55,9 @@ namespace UsersService.Application.Services
             await _validator.ValidateAsync(cmd);
 
             var user = new User(
-                cmd.Name,
-                cmd.SecondName,
-                cmd.Email,
-                cmd.BirthDate
+                cmd.Id,
+                cmd.Username,
+                cmd.Email
             );
 
             await _repo.AddAsync(user);
@@ -82,7 +81,7 @@ namespace UsersService.Application.Services
                 throw new ForbiddenException();
             }
 
-            user.Update(cmd.Name, cmd.SecondName, cmd.Email, cmd.BirthDate);
+            user.Update(cmd.Name, cmd.SecondName, cmd.BirthDate);
 
             await _repo.SaveChangesAsync();
         }
@@ -102,7 +101,7 @@ namespace UsersService.Application.Services
                 throw new ForbiddenException();
             }
 
-            user.Replace(cmd.Name, cmd.SecondName, cmd.Email, cmd.BirthDate);
+            user.Replace(cmd.Name, cmd.SecondName, cmd.BirthDate);
 
             await _repo.SaveChangesAsync();
         }
