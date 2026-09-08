@@ -40,23 +40,23 @@ namespace UsersService.Controllers
         }
 
         // POST api/users
-        [HttpPost]
-        public async Task<IActionResult> Create(CreateUserRequest request)
-        {
-            var userId = await _userService.CreateAsync(
-                new CreateUserCommand(
-                    request.Id,
-                    request.Username,
-                    request.Email
-                )
-            );
+        //[HttpPost]
+        //public async Task<IActionResult> Create(CreateUserRequest request)
+        //{
+        //    var userId = await _userService.CreateAsync(
+        //        new CreateUserCommand(
+        //            request.Id,
+        //            request.Username,
+        //            request.Email
+        //        )
+        //    );
 
-            return CreatedAtAction(
-                nameof(GetById),
-                new { id = userId },
-                null
-            );
-        }
+        //    return CreatedAtAction(
+        //        nameof(GetById),
+        //        new { id = userId },
+        //        null
+        //    );
+        //}
 
         // PUT api/users/{id}
         [HttpPut("{id}")]

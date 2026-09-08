@@ -112,7 +112,10 @@ services:
     stop_grace_period: 30s
   
   keycloak:
-    image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}
+    #image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}
+    build:
+      context: .
+      dockerfile: Keycloak.Dockerfile
     command:
       - start-dev
       - --import-realm
@@ -120,6 +123,15 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      
+      KC_SPI_EVENTS_LISTENER_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KC_SPI_EVENTS_LISTENER_KAFKA_TOPIC_USER: keycloak.user.events
+      KC_SPI_EVENTS_LISTENER_KAFKA_ENABLE_USER_EVENTS: "true"
+      KC_SPI_EVENTS_LISTENER_KAFKA_ENABLE_ADMIN_EVENTS: "true"
+      KC_SPI_EVENTS_LISTENER_KAFKA_SYNC: "false"
+      KC_SPI_EVENTS_LISTENER_KAFKA_PRODUCER_ACKS: all
+      KC_SPI_EVENTS_LISTENER_KAFKA_PRODUCER_RETRIES: "5"
+      KC_SPI_EVENTS_LISTENER_KAFKA_PRODUCER_ENABLE_IDEMPOTENCE: "true"
     ports:
       - "8080:8080"
     volumes:

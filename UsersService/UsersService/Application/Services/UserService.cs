@@ -15,13 +15,20 @@ namespace UsersService.Application.Services
         private readonly IValidatorRunner _validator;
         private readonly ICurrentUser _currentUser;
         private readonly IUserAuthorization _authorization;
+        private readonly ILogger<UserService> _logger;
 
-        public UserService(IUserRepository repo, IValidatorRunner validator, ICurrentUser currentUser, IUserAuthorization authorization)
+        public UserService(
+            IUserRepository repo, 
+            IValidatorRunner validator, 
+            ICurrentUser currentUser, 
+            IUserAuthorization authorization, 
+            ILogger<UserService> logger)
         {
             _repo = repo;
             _validator = validator;
             _currentUser = currentUser;
             _authorization = authorization;
+            _logger = logger;
         }
 
         public async Task<IReadOnlyCollection<UserResponse>> GetAllAsync()
@@ -48,23 +55,23 @@ namespace UsersService.Application.Services
             return MapToResponse(user);
         }
 
-        public async Task<string> CreateAsync(CreateUserCommand cmd)
-        {
-            using var activity = Tracing.ActivitySource.StartActivity("UsersService.Create");
+        //public async Task<string> CreateAsync(CreateUserCommand cmd)
+        //{
+        //    using var activity = Tracing.ActivitySource.StartActivity("UsersService.Create");
 
-            await _validator.ValidateAsync(cmd);
+        //    await _validator.ValidateAsync(cmd);
 
-            var user = new User(
-                cmd.Id,
-                cmd.Username,
-                cmd.Email
-            );
+        //    var user = new User(
+        //        cmd.Id,
+        //        cmd.Username,
+        //        cmd.Email
+        //    );
 
-            await _repo.AddAsync(user);
-            await _repo.SaveChangesAsync();
+        //    await _repo.AddAsync(user);
+        //    await _repo.SaveChangesAsync();
 
-            return user.Id;
-        }
+        //    return user.Id;
+        //}
 
         public async Task UpdateAsync(UpdateUserCommand cmd)
         {
@@ -124,13 +131,96 @@ namespace UsersService.Application.Services
             await _repo.SaveChangesAsync();
         }
 
+        public async Task CreateFromKeycloakAsync(CreateUserFromKeycloakCommand cmd, CancellationToken ct)
+        {
+            using var activity = Tracing.ActivitySource.StartActivity("UsersService.CreateFromKeycloak");
+
+            activity?.SetTag("user.id", cmd.UserId);
+            activity?.SetTag("identity.provider", "keycloak");
+
+            var existingUser = await _repo.GetByIdAsync(cmd.UserId);
+
+            if (existingUser is not null)
+            {
+                _logger.LogInformation("User already exists. UserId={UserId}", cmd.UserId);
+
+                return;
+            }
+
+            var user = new User(
+                cmd.UserId,
+                cmd.Username,
+                cmd.Email);
+
+            await _repo.AddAsync(user);
+            await _repo.SaveChangesAsync(ct);
+        }
+
+        public async Task UpdateEmailFromKeycloakAsync(UpdateUserEmailFromKeycloakCommand cmd, CancellationToken ct)
+        {
+            using var activity = Tracing.ActivitySource.StartActivity("UsersService.UpdateEmailFromKeycloak");
+
+            activity?.SetTag("user.id", cmd.UserId);
+            activity?.SetTag("identity.provider", "keycloak");
+
+            var user = await _repo.GetByIdAsync(cmd.UserId);
+
+            if (user is null)
+            {
+                throw new NotFoundException(nameof(User), cmd.UserId);
+            }
+
+            if (user.Email == cmd.Email)
+            {
+                _logger.LogDebug("User email is already synchronized. UserId={UserId}", cmd.UserId);
+
+                return;
+            }
+
+            user.UpdateEmail(cmd.Email);
+
+            await _repo.SaveChangesAsync(ct);
+
+            _logger.LogInformation("User email synchronized from Keycloak. UserId={UserId}", cmd.UserId);
+        }
+
+        public async Task DeleteFromKeycloakAsync(string userId, CancellationToken ct)
+        {
+            using var activity = Tracing.ActivitySource.StartActivity("UsersService.DeleteFromKeycloak");
+
+            activity?.SetTag("user.id", userId);
+            activity?.SetTag("identity.provider", "keycloak");
+
+            var user = await _repo.GetByIdAsync(userId);
+
+            if (user is null)
+            {
+                _logger.LogWarning("User received DELETE event from Keycloak, but user does not exist in UsersService. UserId={UserId}", userId);
+
+                return;
+            }
+
+            if (user.IsDeleted)
+            {
+                _logger.LogDebug("User is already deleted. UserId={UserId}", userId);
+
+                return;
+            }
+
+            user.DeleteFromKeycloak();
+
+            await _repo.SaveChangesAsync(ct);
+
+            _logger.LogInformation("User soft deleted because user was deleted in Keycloak. UserId={UserId}", userId);
+        }
+
         private static UserResponse MapToResponse(User user)
             => new(
                 user.Id,
-                user.Name,
-                user.SecondName,
+                user.Name ?? "",
+                user.SecondName ?? "",
                 user.Email,
-                user.BirthDate,
+                user.BirthDate ?? DateTime.UtcNow,
                 user.CreationDate
             );
     }

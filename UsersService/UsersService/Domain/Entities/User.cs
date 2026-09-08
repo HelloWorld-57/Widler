@@ -9,11 +9,11 @@ namespace UsersService.Domain.Entities
         public string Id { get; private set; } = null!;    // Keycloak.sub
         public string Email { get; private set; } = null!;  // projection from Keycloak
         public string Username { get; private set; } = null!;  // projection from Keycloak
-        public string Name { get; private set; } = null!;     
-        public string SecondName { get; private set; } = null!;
-        public string FullName => $"{Name} {SecondName}";
-        public DateTime BirthDate { get; private set; }
-        public int Age => DateTime.Today.Year - BirthDate.Year;
+        public string? Name { get; private set; }  
+        public string? SecondName { get; private set; }
+        public string FullName => string.Join(" ", new[] { Name, SecondName }.Where(x => !string.IsNullOrWhiteSpace(x)));
+        public DateTime? BirthDate { get; private set; }
+        public int Age => BirthDate.HasValue ? DateTime.Today.Year - BirthDate.Value.Year : 0;
         public DateTime CreationDate { get; set; }
         public bool IsDeleted { get; private set; }
         public DateTime? DeletedAt { get; set; }
@@ -127,5 +127,41 @@ namespace UsersService.Domain.Entities
 
             AddDomainEvent(new UserDeletedDomainEvent(Id));
         }
+
+        public void UpdateEmail(string email)
+        {
+            if (IsDeleted)
+            {
+                throw new DomainException("user.deleted", "Cannot update deleted user");
+            }
+
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                throw new DomainException("user.email_invalid", "Email cannot be empty");
+            }
+
+            if (Email == email)
+            {
+                return;
+            }
+
+            Email = email;
+
+            AddDomainEvent(new UserUpdatedDomainEvent(Id));
+        }
+
+        public void DeleteFromKeycloak()
+        {
+            if (IsDeleted)
+            {
+                return;
+            }
+
+            IsDeleted = true;
+            DeletedAt = DateTime.UtcNow;
+
+            AddDomainEvent(new UserDeletedDomainEvent(Id));
+        }
+
     }
 }

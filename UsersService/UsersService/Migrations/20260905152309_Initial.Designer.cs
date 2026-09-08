@@ -12,7 +12,7 @@ using UsersService.Infrastructure.Db;
 namespace UsersService.Migrations
 {
     [DbContext(typeof(UsersDbContext))]
-    [Migration("20260902122540_Initial")]
+    [Migration("20260905152309_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -31,7 +31,7 @@ namespace UsersService.Migrations
                         .HasColumnType("text")
                         .HasColumnName("id");
 
-                    b.Property<DateTime>("BirthDate")
+                    b.Property<DateTime?>("BirthDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("birth_date");
 
@@ -53,12 +53,10 @@ namespace UsersService.Migrations
                         .HasColumnName("is_deleted");
 
                     b.Property<string>("Name")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("name");
 
                     b.Property<string>("SecondName")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("second_name");
 

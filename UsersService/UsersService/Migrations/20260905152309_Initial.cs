@@ -53,9 +53,9 @@ namespace UsersService.Migrations
                     id = table.Column<string>(type: "text", nullable: false),
                     email = table.Column<string>(type: "text", nullable: false),
                     username = table.Column<string>(type: "text", nullable: false),
-                    name = table.Column<string>(type: "text", nullable: false),
-                    second_name = table.Column<string>(type: "text", nullable: false),
-                    birth_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    name = table.Column<string>(type: "text", nullable: true),
+                    second_name = table.Column<string>(type: "text", nullable: true),
+                    birth_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     creation_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     is_deleted = table.Column<bool>(type: "boolean", nullable: false),
                     deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)

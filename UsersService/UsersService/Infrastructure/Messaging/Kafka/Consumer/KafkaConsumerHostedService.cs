@@ -1,17 +1,18 @@
 ﻿using Confluent.Kafka;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using UsersService.Infrastructure.Db.Extensions;
-using UsersService.Infrastructure.Db.Inbox;
-using UsersService.Infrastructure.Messaging.Kafka.Dlq;
-using UsersService.Infrastructure.Messaging.Kafka.DlqProducer;
-using UsersService.Infrastructure.Messaging.Kafka.Processing;
-using UsersService.Infrastructure.Observability;
-using UsersService.Infrastructure.Telemetry;
 using Serilog.Context;
 using System.Diagnostics;
 using System.Text;
 using UsersService.Infrastructure.Common;
+using UsersService.Infrastructure.Db.Extensions;
+using UsersService.Infrastructure.Db.Inbox;
+using UsersService.Infrastructure.Messaging.Kafka.Dlq;
+using UsersService.Infrastructure.Messaging.Kafka.DlqProducer;
+using UsersService.Infrastructure.Messaging.Kafka.Events.Keycloak;
+using UsersService.Infrastructure.Messaging.Kafka.Processing;
+using UsersService.Infrastructure.Observability;
+using UsersService.Infrastructure.Telemetry;
 
 namespace UsersService.Infrastructure.Messaging.Kafka.Consumer
 {
@@ -54,6 +55,8 @@ namespace UsersService.Infrastructure.Messaging.Kafka.Consumer
 
 
             var topics = new List<string>() {
+                    _topics.KeycloakUserEvents,
+                    _topics.KeycloakAdminEvents
                     //_topics.Posts 
                 };
 
@@ -94,22 +97,37 @@ namespace UsersService.Infrastructure.Messaging.Kafka.Consumer
                             continue;
                         }
 
-                        var headers = result.Message.Headers;
-
-                        if (!headers.TryGetLastBytes("event-type", out var rawBytes))
-                        {
-                            throw new InvalidOperationException("Missing event-type header");
-                        }
-
-                        var eventType = Encoding.UTF8.GetString(rawBytes);
-
-                        var processor = scope.ServiceProvider.GetRequiredService<IKafkaMessageProcessor>();
-
                         var sw = Stopwatch.StartNew();
 
                         try
                         {
-                            await processor.ProcessAsync(eventType, result.Message.Value, ct);
+                            if (result.Topic == _topics.KeycloakUserEvents)
+                            {
+                                var keycloakProcessor = scope.ServiceProvider.GetRequiredService<IKeycloakEventProcessor>();
+
+                                await keycloakProcessor.ProcessAsync(result, ct);
+                            }
+                            else if (result.Topic == _topics.KeycloakAdminEvents)
+                            {
+                                var keycloakAdminProcessor = scope.ServiceProvider.GetRequiredService<IKeycloakAdminEventProcessor>();
+
+                                await keycloakAdminProcessor.ProcessAsync(result, ct);
+                            }
+                            else
+                            {
+                                var headers = result.Message.Headers;
+
+                                if (!headers.TryGetLastBytes("event-type", out var rawBytes))
+                                {
+                                    throw new InvalidOperationException("Missing event-type header");
+                                }
+
+                                var eventType = Encoding.UTF8.GetString(rawBytes);
+
+                                var processor = scope.ServiceProvider.GetRequiredService<IKafkaMessageProcessor>();
+
+                                await processor.ProcessAsync(eventType, result.Message.Value, ct);
+                            }
 
                             await inbox.MarkProcessedAsync(
                                 messageId,

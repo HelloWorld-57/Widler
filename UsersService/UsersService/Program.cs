@@ -21,6 +21,7 @@ using UsersService.Infrastructure.Messaging.Kafka;
 using UsersService.Infrastructure.Messaging.Kafka.Consumer;
 using UsersService.Infrastructure.Messaging.Kafka.Dlq;
 using UsersService.Infrastructure.Messaging.Kafka.DlqProducer;
+using UsersService.Infrastructure.Messaging.Kafka.Events.Keycloak;
 using UsersService.Infrastructure.Messaging.Kafka.Processing;
 using UsersService.Infrastructure.Messaging.Kafka.Producer;
 using UsersService.Infrastructure.Messaging.Kafka.Routing;
@@ -113,21 +114,24 @@ builder.Services.Configure<KafkaTopics>(builder.Configuration.GetSection("Kafka:
 builder.Services.AddSingleton<IKafkaProducerService, KafkaProducerService>();
 builder.Services.AddHostedService<OutboxProcessor>();
 
-//builder.Services.AddScoped<IInboxService, InboxService>();
+builder.Services.AddScoped<IInboxService, InboxService>();
 
-//if (!builder.Environment.IsEnvironment("Migration"))
-//{
-//    builder.Services.AddHostedService<KafkaConsumerHostedService>();
-//}
+if (!builder.Environment.IsEnvironment("Migration"))
+{
+    builder.Services.AddHostedService<KafkaConsumerHostedService>();
+}
 
-//builder.Services.AddScoped<IKafkaMessageProcessor, KafkaMessageProcessor>();
-//builder.Services.AddSingleton<IDlqProducer, KafkaDlqProducer>();
+builder.Services.AddScoped<IKafkaMessageProcessor, KafkaMessageProcessor>();
+builder.Services.AddSingleton<IDlqProducer, KafkaDlqProducer>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 //builder.Services.AddScoped<IIntegrationEventHandler<UserDeletedV1>, UserDeletedProcessManager>();
-//builder.Services.AddSingleton<IIntegrationEventRouter, IntegrationEventRouter>();
+builder.Services.AddSingleton<IIntegrationEventRouter, IntegrationEventRouter>();
+
+builder.Services.AddScoped<IKeycloakEventProcessor, KeycloakEventProcessor>();
+builder.Services.AddScoped<IKeycloakAdminEventProcessor, KeycloakAdminEventProcessor>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<CreateUserCommandValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<UpdateUserCommandValidator>();
