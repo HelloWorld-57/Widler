@@ -15,6 +15,7 @@ namespace UsersService.Domain.Entities
         public DateTime? BirthDate { get; private set; }
         public int Age => BirthDate.HasValue ? DateTime.Today.Year - BirthDate.Value.Year : 0;
         public DateTime CreationDate { get; set; }
+        public bool IsEnabled { get; private set; }
         public bool IsDeleted { get; private set; }
         public DateTime? DeletedAt { get; set; }
 
@@ -30,6 +31,7 @@ namespace UsersService.Domain.Entities
             Id = id;
             Username = username;
             Email = email;
+            IsEnabled = true;
             CreationDate = DateTime.UtcNow;
 
             AddDomainEvent(new UserCreatedDomainEvent(Id));
@@ -111,6 +113,40 @@ namespace UsersService.Domain.Entities
             Name = name;
             SecondName = secondName;
             BirthDate = birthDate;
+
+            AddDomainEvent(new UserUpdatedDomainEvent(Id));
+        }
+
+        public void Enable()
+        {
+            if (IsDeleted)
+            {
+                throw new DomainException("user.deleted", "Cannot enable deleted user");
+            }
+
+            if (IsEnabled)
+            {
+                return;
+            }
+
+            IsEnabled = true;
+
+            AddDomainEvent(new UserUpdatedDomainEvent(Id));
+        }
+
+        public void Disable()
+        {
+            if (IsDeleted)
+            {
+                throw new DomainException("user.deleted", "Cannot disable deleted user");
+            }
+
+            if (!IsEnabled)
+            {
+                return;
+            }
+
+            IsEnabled = false;
 
             AddDomainEvent(new UserUpdatedDomainEvent(Id));
         }

@@ -37,17 +37,17 @@
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
   "editUsernameAllowed": false,
-  "bruteForceProtected": true,
-  "permanentLockout": true,
-  "maxTemporaryLockouts": 1,
+  "bruteForceProtected": false,
+  "permanentLockout": false,
+  "maxTemporaryLockouts": 0,
   "bruteForceStrategy": "MULTIPLE",
-  "maxFailureWaitSeconds": 60,
+  "maxFailureWaitSeconds": 900,
   "minimumQuickLoginWaitSeconds": 60,
   "waitIncrementSeconds": 60,
   "quickLoginCheckMilliSeconds": 1000,
-  "maxDeltaTimeSeconds": 3600,
-  "failureFactor": 3,
-  "maxSecondaryAuthFailures": 2,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 30,
+  "maxSecondaryAuthFailures": 0,
   "roles": {
     "realm": [
       {
@@ -109,8 +109,7 @@
           "client": {
             "account": [
               "view-profile",
-              "manage-account",
-              "delete-account"
+              "manage-account"
             ]
           }
         },
@@ -1046,113 +1045,7 @@
     "kafka",
     "jboss-logging"
   ],
-  "enabledEventTypes": [
-    "UPDATE_CONSENT_ERROR",
-    "UPDATE_TOTP",
-    "UPDATE_CREDENTIAL",
-    "IMPERSONATE_ERROR",
-    "CUSTOM_REQUIRED_ACTION",
-    "RESTART_AUTHENTICATION",
-    "VERIFIABLE_CREDENTIAL_OFFER_REQUEST",
-    "IMPERSONATE",
-    "LOGIN",
-    "CLIENT_INITIATED_ACCOUNT_LINKING",
-    "OAUTH2_EXTENSION_GRANT",
-    "USER_DISABLED_BY_PERMANENT_LOCKOUT",
-    "VERIFIABLE_CREDENTIAL_REQUEST",
-    "REMOVE_CREDENTIAL_ERROR",
-    "USER_DISABLED_BY_TEMPORARY_LOCKOUT_ERROR",
-    "TOKEN_EXCHANGE",
-    "REGISTER",
-    "DELETE_ACCOUNT_ERROR",
-    "VERIFIABLE_CREDENTIAL_OFFER_REQUEST_ERROR",
-    "IDENTITY_PROVIDER_LINK_ACCOUNT",
-    "USER_DISABLED_BY_TEMPORARY_LOCKOUT",
-    "DELETE_ACCOUNT",
-    "UPDATE_PASSWORD",
-    "IDENTITY_PROVIDER_FIRST_LOGIN",
-    "VERIFY_EMAIL",
-    "CLIENT_LOGIN_ERROR",
-    "RESTART_AUTHENTICATION_ERROR",
-    "EXECUTE_ACTIONS",
-    "REMOVE_FEDERATED_IDENTITY_ERROR",
-    "TOKEN_EXCHANGE_ERROR",
-    "VERIFIABLE_CREDENTIAL_PRE_AUTHORIZED_GRANT",
-    "FEDERATED_IDENTITY_OVERRIDE_LINK",
-    "SEND_IDENTITY_PROVIDER_LINK_ERROR",
-    "VERIFIABLE_CREDENTIAL_CREATE_OFFER",
-    "JWT_AUTHORIZATION_GRANT_ERROR",
-    "VERIFIABLE_CREDENTIAL_PRE_AUTHORIZED_GRANT_ERROR",
-    "EXECUTE_ACTION_TOKEN_ERROR",
-    "OAUTH2_EXTENSION_GRANT_ERROR",
-    "SEND_VERIFY_EMAIL",
-    "EXECUTE_ACTIONS_ERROR",
-    "OAUTH2_DEVICE_CODE_TO_TOKEN",
-    "USER_DISABLED_BY_PERMANENT_LOCKOUT_ERROR",
-    "OAUTH2_DEVICE_VERIFY_USER_CODE_ERROR",
-    "REVOKE_GRANT_ERROR",
-    "UPDATE_EMAIL_ERROR",
-    "INVITE_ORG_ERROR",
-    "UPDATE_PROFILE",
-    "VERIFIABLE_CREDENTIAL_REQUEST_ERROR",
-    "SEND_IDENTITY_PROVIDER_LINK",
-    "SEND_VERIFY_EMAIL_ERROR",
-    "CLIENT_INITIATED_ACCOUNT_LINKING_ERROR",
-    "OAUTH2_DEVICE_AUTH_ERROR",
-    "REMOVE_TOTP_ERROR",
-    "VERIFY_EMAIL_ERROR",
-    "CLIENT_UPDATE",
-    "JWT_AUTHORIZATION_GRANT",
-    "UPDATE_TOTP_ERROR",
-    "VERIFY_PROFILE",
-    "GRANT_CONSENT_ERROR",
-    "SEND_RESET_PASSWORD",
-    "GRANT_CONSENT",
-    "VERIFY_PROFILE_ERROR",
-    "REMOVE_TOTP",
-    "REVOKE_GRANT",
-    "LOGIN_ERROR",
-    "CLIENT_LOGIN",
-    "RESET_PASSWORD_ERROR",
-    "CODE_TO_TOKEN_ERROR",
-    "OAUTH2_DEVICE_CODE_TO_TOKEN_ERROR",
-    "UPDATE_PROFILE_ERROR",
-    "OAUTH2_DEVICE_VERIFY_USER_CODE",
-    "UPDATE_PASSWORD_ERROR",
-    "IDENTITY_PROVIDER_LOGIN",
-    "AUTHREQID_TO_TOKEN",
-    "LOGOUT",
-    "CLIENT_REGISTER",
-    "CLIENT_DELETE",
-    "FEDERATED_IDENTITY_LINK_ERROR",
-    "CLIENT_DELETE_ERROR",
-    "PERMISSION_TOKEN",
-    "UPDATE_CREDENTIAL_ERROR",
-    "OAUTH2_DEVICE_AUTH",
-    "REMOVE_FEDERATED_IDENTITY",
-    "IDENTITY_PROVIDER_POST_LOGIN",
-    "VERIFIABLE_CREDENTIAL_CREATE_OFFER_ERROR",
-    "IDENTITY_PROVIDER_LINK_ACCOUNT_ERROR",
-    "FEDERATED_IDENTITY_OVERRIDE_LINK_ERROR",
-    "UPDATE_EMAIL",
-    "REGISTER_ERROR",
-    "EXECUTE_ACTION_TOKEN",
-    "LOGOUT_ERROR",
-    "CLIENT_UPDATE_ERROR",
-    "AUTHREQID_TO_TOKEN_ERROR",
-    "CLIENT_REGISTER_ERROR",
-    "FEDERATED_IDENTITY_LINK",
-    "INVITE_ORG",
-    "IDENTITY_PROVIDER_LOGIN_ERROR",
-    "RESET_PASSWORD",
-    "REMOVE_CREDENTIAL",
-    "UPDATE_CONSENT",
-    "SEND_RESET_PASSWORD_ERROR",
-    "CUSTOM_REQUIRED_ACTION_ERROR",
-    "IDENTITY_PROVIDER_POST_LOGIN_ERROR",
-    "CODE_TO_TOKEN",
-    "IDENTITY_PROVIDER_FIRST_LOGIN_ERROR"
-  ],
+  "enabledEventTypes": [],
   "adminEventsEnabled": true,
   "adminEventsDetailsEnabled": true,
   "identityProviders": [],
@@ -1250,14 +1143,14 @@
         "subComponents": {},
         "config": {
           "allowed-protocol-mapper-types": [
-            "oidc-usermodel-attribute-mapper",
-            "saml-user-attribute-mapper",
-            "saml-user-property-mapper",
-            "oidc-full-name-mapper",
-            "saml-role-list-mapper",
             "oidc-address-mapper",
+            "oidc-usermodel-property-mapper",
+            "oidc-full-name-mapper",
+            "saml-user-attribute-mapper",
+            "saml-role-list-mapper",
+            "saml-user-property-mapper",
             "oidc-sha256-pairwise-sub-mapper",
-            "oidc-usermodel-property-mapper"
+            "oidc-usermodel-attribute-mapper"
           ]
         }
       },
@@ -1269,14 +1162,14 @@
         "subComponents": {},
         "config": {
           "allowed-protocol-mapper-types": [
-            "saml-role-list-mapper",
-            "oidc-usermodel-attribute-mapper",
-            "oidc-usermodel-property-mapper",
-            "saml-user-attribute-mapper",
             "oidc-address-mapper",
+            "oidc-sha256-pairwise-sub-mapper",
+            "oidc-usermodel-attribute-mapper",
+            "saml-user-attribute-mapper",
             "oidc-full-name-mapper",
+            "oidc-usermodel-property-mapper",
             "saml-user-property-mapper",
-            "oidc-sha256-pairwise-sub-mapper"
+            "saml-role-list-mapper"
           ]
         }
       }
@@ -2096,7 +1989,7 @@
       "alias": "delete_account",
       "name": "Delete Account",
       "providerId": "delete_account",
-      "enabled": true,
+      "enabled": false,
       "defaultAction": false,
       "priority": 60,
       "config": {}
@@ -2198,8 +2091,7 @@
     "clientSessionMaxLifespan": "0",
     "frontendUrl": "",
     "scimApiEnabled": "false",
-    "acr.loa.map": "{}",
-    "adminEventsExpiration": ""
+    "acr.loa.map": "{}"
   },
   "keycloakVersion": "26.7.1",
   "userManagedAccessAllowed": false,
@@ -2212,5 +2104,40 @@
   },
   "clientPolicies": {
     "policies": []
-  }
+  },
+  "users": [
+    {
+	  "username": "qqq",
+	  "enabled": true,
+	  "email": "qqq@gmail.com",
+	  "emailVerified": true,
+	  "credentials": [
+	    {
+		  "type": "password",
+		  "value": "qqq",
+		  "temporary": false
+	    }
+	  ],
+	  "realmRoles": [
+	    "user"
+	  ]
+    },
+    {
+	  "username": "admin",
+	  "enabled": true,
+	  "email": "admin@gmail.com",
+	  "emailVerified": true,
+	  "credentials": [
+	    {
+		  "type": "password",
+		  "value": "Admin123",
+		  "temporary": false
+	    }
+	  ],
+	  "realmRoles": [
+	    "user",
+	    "admin"
+	  ]
+    }
+  ]
 }

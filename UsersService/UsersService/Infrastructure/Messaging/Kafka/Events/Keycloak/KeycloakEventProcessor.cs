@@ -41,6 +41,18 @@ namespace UsersService.Infrastructure.Messaging.Kafka.Events.Keycloak
                     await ProcessUpdateEmailAsync(keycloakEvent, ct);
                     break;
 
+                case "DELETE_ACCOUNT":
+                    await ProcessDeleteAccountAsync(keycloakEvent, ct);
+                    break;
+
+                //case "USER_DISABLED_BY_TEMPORARY_LOCKOUT":
+                //    await ProcessTemporaryLockoutAsync(keycloakEvent, ct);
+                //    break;
+
+                case "USER_DISABLED_BY_PERMANENT_LOCKOUT":
+                    await ProcessPermanentLockoutAsync(keycloakEvent, ct);
+                    break;
+
                 default:
                     _logger.LogDebug("Ignoring Keycloak event. EventType={EventType}", keycloakEvent.EventType);
                     break;
@@ -86,6 +98,20 @@ namespace UsersService.Infrastructure.Messaging.Kafka.Events.Keycloak
                     keycloakEvent.UserId!,
                     updatedEmail),
                 ct);
+        }
+
+        private async Task ProcessDeleteAccountAsync(KeycloakUserEvent keycloakEvent, CancellationToken ct)
+        {
+            await _userService.DeleteFromKeycloakAsync(keycloakEvent.UserId!, ct);
+
+            _logger.LogInformation("Keycloak user DELETE_ACCOUNT processed. UserId={UserId}", keycloakEvent.UserId);
+        }
+
+        private async Task ProcessPermanentLockoutAsync(KeycloakUserEvent keycloakEvent, CancellationToken ct)
+        {
+            await _userService.DisableFromKeycloakAsync(keycloakEvent.UserId!, ct);
+
+            _logger.LogInformation("Keycloak user USER_DISABLED_BY_PERMANENT_LOCKOUT processed. UserId={UserId}", keycloakEvent.UserId);
         }
     }
 }

@@ -58,30 +58,55 @@ namespace UsersService.Infrastructure.Messaging.Kafka.Events.Keycloak
                 throw new InvalidOperationException("Keycloak USER UPDATE event does not contain representation.");
             }
 
-            var user = JsonSerializer.Deserialize<KeycloakUserRepresentation>(adminEvent.Representation, JsonOptions.Default);
+            var keycloakUser = JsonSerializer.Deserialize<KeycloakUserRepresentation>(adminEvent.Representation, JsonOptions.Default);
 
-            if (user is null)
+            if (keycloakUser is null)
             {
                 throw new InvalidOperationException("Failed to deserialize Keycloak user representation.");
             }
 
-            if (string.IsNullOrWhiteSpace(user.Id))
+            if (string.IsNullOrWhiteSpace(keycloakUser.Id))
             {
                 throw new InvalidOperationException("Keycloak user representation does not contain id.");
             }
 
-            if (string.IsNullOrWhiteSpace(user.Email))
+            var user = await _userService.GetByIdAsync(keycloakUser.Id);
+
+            if (user.IsEnabled != keycloakUser.Enabled)
             {
-                throw new InvalidOperationException("Keycloak user representation does not contain email.");
+                if (keycloakUser.Enabled)
+                {
+                    await _userService.EnableFromKeycloakAsync(keycloakUser.Id, ct);
+                }
+                else
+                {
+                    await _userService.DisableFromKeycloakAsync(keycloakUser.Id, ct);
+                }
+
+                _logger.LogInformation(
+                    "Keycloak user enabled state synchronized. UserId={UserId}, Enabled={Enabled}",
+                    keycloakUser.Id,
+                    keycloakUser.Enabled);
+
+                //return;
             }
 
-            await _userService.UpdateEmailFromKeycloakAsync(
-                new UpdateUserEmailFromKeycloakCommand(
-                    user.Id,
-                    user.Email),
-                ct);
+            //if (string.IsNullOrWhiteSpace(keycloakUser.Email))
+            //{
+            //    throw new InvalidOperationException("Keycloak user representation does not contain email.");
+            //}
 
-            _logger.LogInformation("Keycloak admin USER UPDATE processed. UserId={UserId}", user.Id);
+            if (!string.IsNullOrWhiteSpace(keycloakUser.Email) && 
+                !String.Equals(user.Email, keycloakUser.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                await _userService.UpdateEmailFromKeycloakAsync(
+                new UpdateUserEmailFromKeycloakCommand(
+                    keycloakUser.Id,
+                    keycloakUser.Email),
+                ct);
+            }
+
+            _logger.LogInformation("Keycloak admin USER UPDATE processed. UserId={UserId}", keycloakUser.Id);
         }
 
         private async Task ProcessUserDeleteAsync(KeycloakAdminEvent adminEvent, CancellationToken ct)

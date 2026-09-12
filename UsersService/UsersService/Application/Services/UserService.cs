@@ -184,6 +184,80 @@ namespace UsersService.Application.Services
             _logger.LogInformation("User email synchronized from Keycloak. UserId={UserId}", cmd.UserId);
         }
 
+        public async Task EnableFromKeycloakAsync(string userId, CancellationToken ct)
+        {
+            using var activity = Tracing.ActivitySource.StartActivity("UsersService.EnableFromKeycloak");
+
+            activity?.SetTag("user.id", userId);
+            activity?.SetTag("identity.provider", "keycloak");
+
+            var user = await _repo.GetByIdAsync(userId);
+
+            if (user is null)
+            {
+                _logger.LogWarning("User received ENABLE event from Keycloak, but user does not exist in UsersService. UserId={UserId}", userId);
+
+                return;
+            }
+
+            if (user.IsDeleted)
+            {
+                _logger.LogWarning("Ignoring ENABLE event for deleted user. UserId={UserId}", userId);
+
+                return;
+            }
+
+            if (user.IsEnabled)
+            {
+                _logger.LogDebug("User is already enabled. UserId={UserId}", userId);
+
+                return;
+            }
+
+            user.Enable();
+
+            await _repo.SaveChangesAsync(ct);
+
+            _logger.LogInformation("User enabled because user was enabled in Keycloak. UserId={UserId}", userId);
+        }
+
+        public async Task DisableFromKeycloakAsync(string userId, CancellationToken ct)
+        {
+            using var activity = Tracing.ActivitySource.StartActivity("UsersService.DisableFromKeycloak");
+
+            activity?.SetTag("user.id", userId);
+            activity?.SetTag("identity.provider", "keycloak");
+
+            var user = await _repo.GetByIdAsync(userId);
+
+            if (user is null)
+            {
+                _logger.LogWarning("User received DISABLE event from Keycloak, but user does not exist in UsersService. UserId={UserId}", userId);
+
+                return;
+            }
+
+            if (user.IsDeleted)
+            {
+                _logger.LogWarning("Ignoring DISABLE event for deleted user. UserId={UserId}", userId);
+
+                return;
+            }
+
+            if (!user.IsEnabled)
+            {
+                _logger.LogDebug("User is already disabled. UserId={UserId}", userId);
+
+                return;
+            }
+
+            user.Disable();
+
+            await _repo.SaveChangesAsync(ct);
+
+            _logger.LogInformation("User disabled because user was disabled in Keycloak. UserId={UserId}", userId);
+        }
+
         public async Task DeleteFromKeycloakAsync(string userId, CancellationToken ct)
         {
             using var activity = Tracing.ActivitySource.StartActivity("UsersService.DeleteFromKeycloak");
@@ -221,7 +295,8 @@ namespace UsersService.Application.Services
                 user.SecondName ?? "",
                 user.Email,
                 user.BirthDate ?? DateTime.UtcNow,
-                user.CreationDate
+                user.CreationDate,
+                user.IsEnabled
             );
     }
 }

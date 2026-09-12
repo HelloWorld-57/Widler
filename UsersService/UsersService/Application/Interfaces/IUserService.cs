@@ -15,5 +15,7 @@ namespace UsersService.Application.Interfaces
         Task CreateFromKeycloakAsync(CreateUserFromKeycloakCommand cmd, CancellationToken ct);
         Task UpdateEmailFromKeycloakAsync(UpdateUserEmailFromKeycloakCommand cmd, CancellationToken ct);
         Task DeleteFromKeycloakAsync(string userId, CancellationToken ct);
+        Task DisableFromKeycloakAsync(string userId, CancellationToken ct);
+        Task EnableFromKeycloakAsync(string userId, CancellationToken ct);
     }
 }
