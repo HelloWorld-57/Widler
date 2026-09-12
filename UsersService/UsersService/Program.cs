@@ -1,6 +1,8 @@
 using Asp.Versioning;
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -19,10 +21,13 @@ using UsersService.Infrastructure.Messaging.Kafka;
 using UsersService.Infrastructure.Messaging.Kafka.Consumer;
 using UsersService.Infrastructure.Messaging.Kafka.Dlq;
 using UsersService.Infrastructure.Messaging.Kafka.DlqProducer;
+using UsersService.Infrastructure.Messaging.Kafka.Events.Keycloak;
 using UsersService.Infrastructure.Messaging.Kafka.Processing;
 using UsersService.Infrastructure.Messaging.Kafka.Producer;
 using UsersService.Infrastructure.Messaging.Kafka.Routing;
 using UsersService.Infrastructure.Middleware;
+using UsersService.Infrastructure.Observability;
+using UsersService.Infrastructure.Security;
 using UsersService.Infrastructure.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -84,6 +89,18 @@ builder.Services.AddApiVersioning(options =>
 
 builder.Host.UseSerilog();
 
+var keycloakAuthority = builder.Configuration["Keycloak:Authority"]
+    ?? throw new InvalidOperationException("Keycloak:Authority is not configured.");
+
+var keycloakAudience = builder.Configuration["Keycloak:Audience"]
+    ?? throw new InvalidOperationException("Keycloak:Audience is not configured.");
+
+var keycloakIssuer = builder.Configuration["Keycloak:Issuer"]
+    ?? throw new InvalidOperationException("Keycloak:Issuer is not configured.");
+
+var requireHttpsMetadata = builder.Configuration.GetValue<bool>("Keycloak:RequireHttpsMetadata");
+
+
 builder.Services.AddScoped<OutboxSaveChangesInterceptor>();
 builder.Services.AddDbContext<UsersDbContext>((sp, options) =>
 {
@@ -97,27 +114,36 @@ builder.Services.Configure<KafkaTopics>(builder.Configuration.GetSection("Kafka:
 builder.Services.AddSingleton<IKafkaProducerService, KafkaProducerService>();
 builder.Services.AddHostedService<OutboxProcessor>();
 
-//builder.Services.AddScoped<IInboxService, InboxService>();
+builder.Services.AddScoped<IInboxService, InboxService>();
 
-//if (!builder.Environment.IsEnvironment("Migration"))
-//{
-//    builder.Services.AddHostedService<KafkaConsumerHostedService>();
-//}
+if (!builder.Environment.IsEnvironment("Migration"))
+{
+    builder.Services.AddHostedService<KafkaConsumerHostedService>();
+}
 
-//builder.Services.AddScoped<IKafkaMessageProcessor, KafkaMessageProcessor>();
-//builder.Services.AddSingleton<IDlqProducer, KafkaDlqProducer>();
+builder.Services.AddScoped<IKafkaMessageProcessor, KafkaMessageProcessor>();
+builder.Services.AddSingleton<IDlqProducer, KafkaDlqProducer>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 //builder.Services.AddScoped<IIntegrationEventHandler<UserDeletedV1>, UserDeletedProcessManager>();
-//builder.Services.AddSingleton<IIntegrationEventRouter, IntegrationEventRouter>();
+builder.Services.AddSingleton<IIntegrationEventRouter, IntegrationEventRouter>();
+
+builder.Services.AddScoped<IKeycloakEventProcessor, KeycloakEventProcessor>();
+builder.Services.AddScoped<IKeycloakAdminEventProcessor, KeycloakAdminEventProcessor>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<CreateUserCommandValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<UpdateUserCommandValidator>();
 builder.Services.AddScoped<IValidatorRunner, ValidatorRunner>();
 
 builder.Services.AddControllers();
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICorrelationContext, CorrelationContext>();
+
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+builder.Services.AddScoped<IUserAuthorization, UserAuthorization>();
 
 builder.Services.AddOpenApi();
 
@@ -134,6 +160,61 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = keycloakAuthority;
+        options.Audience = keycloakAudience;
+
+        options.RequireHttpsMetadata = requireHttpsMetadata;
+
+        options.MapInboundClaims = false;
+
+        options.TokenValidationParameters =
+            new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+
+                ValidIssuer = keycloakIssuer,
+                ValidAudience = keycloakAudience,
+
+                RoleClaimType = "roles",
+
+                ClockSkew = TimeSpan.FromSeconds(30)
+            };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Authenticated", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+    });
+
+    options.AddPolicy("Admin", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole("admin");
+    });
+
+    options.AddPolicy("Moderator", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole("moderator");
+    });
+
+    // Admin OR moderator
+    options.AddPolicy("AdminOrModerator", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole("admin", "moderator");
+    });
+});
+
 var app = builder.Build();
 
 app.UseSerilogRequestLogging();
@@ -142,11 +223,13 @@ app.MapPrometheusScrapingEndpoint();
 
 app.Use(async (context, next) =>
 {
-    var traceId =
-        Activity.Current?.TraceId.ToString()
+    var traceId = Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier;
+
+    var correlationId = context.Request.Headers[CorrelationHeaders.CorrelationId].FirstOrDefault()
         ?? context.TraceIdentifier;
 
     using (LogContext.PushProperty("TraceId", traceId))
+    using (LogContext.PushProperty("CorrelationId", correlationId))
     {
         await next();
     }
@@ -177,6 +260,7 @@ app.UseCors("AllowReactViteFrontend");
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

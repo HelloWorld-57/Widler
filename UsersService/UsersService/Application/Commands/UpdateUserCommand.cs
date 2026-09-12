@@ -4,7 +4,6 @@
         string UserId,
         string? Name,
         string? SecondName,
-        string? Email,
         DateTime? BirthDate
     );
 }

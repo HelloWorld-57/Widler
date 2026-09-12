@@ -107,19 +107,19 @@ namespace UsersService.Infrastructure.Messaging.Kafka.Processing
                 case IntegrationEventNames.Users.CreatedV1:
                     {
                         var evt = JsonSerializer.Deserialize<UserCreatedV1>(msg.Payload, JsonOptions.Default)!;
-                        await _producer.PublishUserCreatedAsync(evt, ct);
+                        await _producer.PublishUserCreatedAsync(evt, msg.TraceParent, msg.TraceState, msg.CorrelationId, ct);
                         break;
                     }
                 case IntegrationEventNames.Users.UpdatedV1:
                     {
                         var evt = JsonSerializer.Deserialize<UserUpdatedV1>(msg.Payload, JsonOptions.Default)!;
-                        await _producer.PublishUserUpdatedAsync(evt, ct);
+                        await _producer.PublishUserUpdatedAsync(evt, msg.TraceParent, msg.TraceState, msg.CorrelationId, ct);
                         break;
                     }
                 case IntegrationEventNames.Users.DeletedV1:
                     {
                         var evt = JsonSerializer.Deserialize<UserDeletedV1>(msg.Payload, JsonOptions.Default)!;
-                        await _producer.PublishUserDeletedAsync(evt, ct);
+                        await _producer.PublishUserDeletedAsync(evt, msg.TraceParent, msg.TraceState, msg.CorrelationId, ct);
                         break;
                     }
                 default:

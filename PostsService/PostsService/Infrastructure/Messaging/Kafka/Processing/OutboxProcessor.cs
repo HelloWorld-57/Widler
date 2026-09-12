@@ -106,19 +106,19 @@ namespace PostsService.Infrastructure.Messaging.Kafka.Processing
                 case IntegrationEventNames.Posts.CreatedV1:
                     {
                         var evt = JsonSerializer.Deserialize<PostCreatedV1>(msg.Payload, JsonOptions.Default)!;
-                        await _producer.PublishPostCreatedAsync(evt, ct);
+                        await _producer.PublishPostCreatedAsync(evt, msg.TraceParent, msg.TraceState, msg.CorrelationId, ct);
                         break;
                     }
                 case IntegrationEventNames.Posts.UpdatedV1:
                     {
                         var evt = JsonSerializer.Deserialize<PostUpdatedV1>(msg.Payload, JsonOptions.Default)!;
-                        await _producer.PublishPostUpdatedAsync(evt, ct);
+                        await _producer.PublishPostUpdatedAsync(evt, msg.TraceParent, msg.TraceState, msg.CorrelationId, ct);
                         break;
                     }
                 case IntegrationEventNames.Posts.DeletedV1:
                     {
                         var evt = JsonSerializer.Deserialize<PostDeletedV1>(msg.Payload, JsonOptions.Default)!;
-                        await _producer.PublishPostDeletedAsync(evt, ct);
+                        await _producer.PublishPostDeletedAsync(evt, msg.TraceParent, msg.TraceState, msg.CorrelationId, ct);
                         break;
                     }
                 default:

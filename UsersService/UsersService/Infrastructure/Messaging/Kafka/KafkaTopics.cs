@@ -7,5 +7,8 @@
 
         public string Posts { get; init; } = null!;
         public string PostsDlq { get; init; } = null!;
+
+        public string KeycloakUserEvents { get; init; } = null!;
+        public string KeycloakAdminEvents { get; init; } = null!;
     }
 }

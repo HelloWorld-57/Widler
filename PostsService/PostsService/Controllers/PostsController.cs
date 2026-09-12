@@ -1,22 +1,26 @@
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PostsService.Application.Commands;
 using PostsService.Application.Interfaces;
 using PostsService.DTOs.Requests;
 using PostsService.DTOs.Response;
+using PostsService.Infrastructure.Security;
 
 namespace PostsService.Controllers
 {
     [ApiController]
+    [Authorize]
     [ApiVersion("1.0")]
     [Route("api/v{version:apiVersion}/posts")]
     public class PostsController : ControllerBase
     {
         private readonly IPostService _postService;
-
-        public PostsController(IPostService postService)
+        private readonly ICurrentUser _currentUser;
+        public PostsController(IPostService postService, ICurrentUser currentUser)
         {
             _postService = postService;
+            _currentUser = currentUser;
         }
 
         // GET api/posts
@@ -42,8 +46,7 @@ namespace PostsService.Controllers
             var postId = await _postService.CreateAsync(
                 new CreatePostCommand(
                     request.Caption,
-                    request.Content,
-                    request.UserId
+                    request.Content
                 )
             );
 
@@ -91,5 +94,20 @@ namespace PostsService.Controllers
             await _postService.DeleteAsync(id);
             return NoContent();
         }
+
+        // debug
+        [HttpGet("cu")]
+        public IActionResult CurrentUser()
+        {
+            return Ok(new
+            {
+                IsAuthenticated = _currentUser.IsAuthenticated,
+                UserId = _currentUser.Id,
+                Username = _currentUser.Username,
+                email = _currentUser.Email,
+                Roles = _currentUser.Roles
+            });
+        }
+
     }
 }

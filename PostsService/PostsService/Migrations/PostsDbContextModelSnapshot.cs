@@ -101,6 +101,10 @@ namespace PostsService.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("attempts");
 
+                    b.Property<string>("CorrelationId")
+                        .HasColumnType("text")
+                        .HasColumnName("correlation_id");
+
                     b.Property<string>("EventType")
                         .IsRequired()
                         .HasColumnType("text")
@@ -122,6 +126,14 @@ namespace PostsService.Migrations
                     b.Property<DateTime?>("ProcessedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("processed_at");
+
+                    b.Property<string>("TraceParent")
+                        .HasColumnType("text")
+                        .HasColumnName("trace_parent");
+
+                    b.Property<string>("TraceState")
+                        .HasColumnType("text")
+                        .HasColumnName("trace_state");
 
                     b.HasKey("Id")
                         .HasName("pk_outbox_messages");

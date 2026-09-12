@@ -1,0 +1,30 @@
+{
+    "realmId": "ccd0c11f-21ff-468d-9c31-80aa6f98c9c2",
+    "realmName": "widler",
+    "userId": "c0f14602-d795-4ccf-8ee2-a93649c8fb5d",
+    "ipAddress": "172.18.0.1",
+    "eventType": "USER_DISABLED_BY_PERMANENT_LOCKOUT",
+    "time": 1789202797482,
+    "details": {
+        "reason": "brute_force_attack detected",
+        "num_failures": "4"
+    }
+}
+
+
+{
+    "realmId": "ccd0c11f-21ff-468d-9c31-80aa6f98c9c2",
+    "realmName": "widler",
+    "userId": "c0f14602-d795-4ccf-8ee2-a93649c8fb5d",
+    "ipAddress": "172.18.0.1",
+    "eventType": "USER_DISABLED_BY_TEMPORARY_LOCKOUT",
+    "time": 1789202737235,
+    "details": {
+        "reason": "brute_force_attack detected",
+        "not_before": "2026-09-12T08:46:37",
+        "num_failures": "3"
+    }
+}
+
+
+

@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UsersService.Application.Commands;
 using UsersService.Application.Interfaces;
@@ -8,15 +9,18 @@ using UsersService.DTOs.Response;
 namespace UsersService.Controllers
 {
     [ApiController]
+    [Authorize]
     [ApiVersion("1.0")]
     [Route("api/v{version:apiVersion}/users")]
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly ICurrentUser _currentUser;
 
-        public UsersController(IUserService userService)
+        public UsersController(IUserService userService, ICurrentUser currentUser)
         {
             _userService = userService;
+            _currentUser = currentUser;
         }
 
         // GET api/users
@@ -36,24 +40,23 @@ namespace UsersService.Controllers
         }
 
         // POST api/users
-        [HttpPost]
-        public async Task<IActionResult> Create(CreateUserRequest request)
-        {
-            var userId = await _userService.CreateAsync(
-                new CreateUserCommand(
-                    request.Name,
-                    request.SecondName,
-                    request.Email,
-                    request.BirthDate
-                )
-            );
+        //[HttpPost]
+        //public async Task<IActionResult> Create(CreateUserRequest request)
+        //{
+        //    var userId = await _userService.CreateAsync(
+        //        new CreateUserCommand(
+        //            request.Id,
+        //            request.Username,
+        //            request.Email
+        //        )
+        //    );
 
-            return CreatedAtAction(
-                nameof(GetById),
-                new { id = userId },
-                null
-            );
-        }
+        //    return CreatedAtAction(
+        //        nameof(GetById),
+        //        new { id = userId },
+        //        null
+        //    );
+        //}
 
         // PUT api/users/{id}
         [HttpPut("{id}")]
@@ -64,7 +67,6 @@ namespace UsersService.Controllers
                     id,
                     request.Name,
                     request.SecondName,
-                    request.Email,
                     request.BirthDate
                 )
             );
@@ -81,7 +83,6 @@ namespace UsersService.Controllers
                     id,
                     request.Name,
                     request.SecondName,
-                    request.Email,
                     request.BirthDate
                 )
             );

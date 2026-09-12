@@ -6,14 +6,16 @@ namespace UsersService.Domain.Entities
 {
     public class User : IHasDomainEvents
     {
-        public string Id { get; private set; } = null!;
-        public string Name { get; private set; } = null!;
-        public string SecondName { get; private set; } = null!;
-        public string FullName => $"{Name} {SecondName}";
-        public string Email { get; private set; } = null!;
-        public DateTime BirthDate { get; private set; }
-        public int Age => DateTime.Today.Year - BirthDate.Year;
+        public string Id { get; private set; } = null!;    // Keycloak.sub
+        public string Email { get; private set; } = null!;  // projection from Keycloak
+        public string Username { get; private set; } = null!;  // projection from Keycloak
+        public string? Name { get; private set; }  
+        public string? SecondName { get; private set; }
+        public string FullName => string.Join(" ", new[] { Name, SecondName }.Where(x => !string.IsNullOrWhiteSpace(x)));
+        public DateTime? BirthDate { get; private set; }
+        public int Age => BirthDate.HasValue ? DateTime.Today.Year - BirthDate.Value.Year : 0;
         public DateTime CreationDate { get; set; }
+        public bool IsEnabled { get; private set; }
         public bool IsDeleted { get; private set; }
         public DateTime? DeletedAt { get; set; }
 
@@ -24,19 +26,31 @@ namespace UsersService.Domain.Entities
 
         private User() { }
 
-        public User(string name, string secondName, string email, DateTime birthDate)
+        public User(string id, string username, string email)
         {
-            Id = Guid.NewGuid().ToString();
-            Name = name;
-            SecondName = secondName;
+            Id = id;
+            Username = username;
             Email = email;
-            BirthDate = birthDate;
+            IsEnabled = true;
             CreationDate = DateTime.UtcNow;
 
             AddDomainEvent(new UserCreatedDomainEvent(Id));
         }
 
-        public void Update(string? name, string? secondName, string? email, DateTime? birthDate)
+        //public User(string id, string name, string secondName, string username, string email, DateTime birthDate)
+        //{
+        //    Id = id;
+        //    Name = name;
+        //    SecondName = secondName;
+        //    Username = username;
+        //    Email = email;
+        //    BirthDate = birthDate;
+        //    CreationDate = DateTime.UtcNow;
+
+        //    AddDomainEvent(new UserCreatedDomainEvent(Id));
+        //}
+
+        public void Update(string? name, string? secondName, DateTime? birthDate)
         {
             if (IsDeleted)
             {
@@ -67,17 +81,6 @@ namespace UsersService.Domain.Entities
                 isChanged = true;
             }
 
-            if (email is not null)
-            {
-                if (string.IsNullOrWhiteSpace(email))
-                {
-                    throw new DomainException("user.email_invalid", "Email cannot be empty");
-                }
-
-                Email = email;
-                isChanged = true;
-            }
-
             if (birthDate is not null)
             {
                 BirthDate = birthDate.Value;
@@ -90,7 +93,7 @@ namespace UsersService.Domain.Entities
             }
         }
 
-        public void Replace(string name, string secondName, string email, DateTime birthDate)
+        public void Replace(string name, string secondName, DateTime birthDate)
         {
             if (IsDeleted)
             {
@@ -107,15 +110,43 @@ namespace UsersService.Domain.Entities
                 throw new DomainException("user.secondName_required", "SecondName is required");
             }
 
-            if (string.IsNullOrWhiteSpace(email))
-            {
-                throw new DomainException("user.email_required", "Email is required");
-            }
-
             Name = name;
             SecondName = secondName;
-            Email = email;
             BirthDate = birthDate;
+
+            AddDomainEvent(new UserUpdatedDomainEvent(Id));
+        }
+
+        public void Enable()
+        {
+            if (IsDeleted)
+            {
+                throw new DomainException("user.deleted", "Cannot enable deleted user");
+            }
+
+            if (IsEnabled)
+            {
+                return;
+            }
+
+            IsEnabled = true;
+
+            AddDomainEvent(new UserUpdatedDomainEvent(Id));
+        }
+
+        public void Disable()
+        {
+            if (IsDeleted)
+            {
+                throw new DomainException("user.deleted", "Cannot disable deleted user");
+            }
+
+            if (!IsEnabled)
+            {
+                return;
+            }
+
+            IsEnabled = false;
 
             AddDomainEvent(new UserUpdatedDomainEvent(Id));
         }
@@ -132,5 +163,41 @@ namespace UsersService.Domain.Entities
 
             AddDomainEvent(new UserDeletedDomainEvent(Id));
         }
+
+        public void UpdateEmail(string email)
+        {
+            if (IsDeleted)
+            {
+                throw new DomainException("user.deleted", "Cannot update deleted user");
+            }
+
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                throw new DomainException("user.email_invalid", "Email cannot be empty");
+            }
+
+            if (Email == email)
+            {
+                return;
+            }
+
+            Email = email;
+
+            AddDomainEvent(new UserUpdatedDomainEvent(Id));
+        }
+
+        public void DeleteFromKeycloak()
+        {
+            if (IsDeleted)
+            {
+                return;
+            }
+
+            IsDeleted = true;
+            DeletedAt = DateTime.UtcNow;
+
+            AddDomainEvent(new UserDeletedDomainEvent(Id));
+        }
+
     }
 }

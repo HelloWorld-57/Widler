@@ -1,9 +1,8 @@
 ﻿namespace UsersService.DTOs.Requests
 {
     public record CreateUserRequest(
-        string Name,
-        string SecondName,
-        string Email,
-        DateTime BirthDate
+        string Id,
+        string Username,
+        string Email
     );
 }
