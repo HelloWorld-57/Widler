@@ -26,12 +26,12 @@ namespace UsersService.Domain.Entities
 
         private User() { }
 
-        public User(string id, string username, string email)
+        public User(string id, string username, string email, bool isEnabled = true)
         {
             Id = id;
             Username = username;
             Email = email;
-            IsEnabled = true;
+            IsEnabled = isEnabled;
             CreationDate = DateTime.UtcNow;
 
             AddDomainEvent(new UserCreatedDomainEvent(Id));
@@ -197,6 +197,62 @@ namespace UsersService.Domain.Entities
             DeletedAt = DateTime.UtcNow;
 
             AddDomainEvent(new UserDeletedDomainEvent(Id));
+        }
+
+        public void RestoreFromKeycloak(
+            string username,
+            string email,
+            bool isEnabled)
+        {
+            if (!IsDeleted)
+            {
+                return;
+            }
+
+            IsDeleted = false;
+            DeletedAt = null;
+
+            Username = username;
+            Email = email;
+            IsEnabled = isEnabled;
+
+            AddDomainEvent(new UserUpdatedDomainEvent(Id));
+        }
+
+        public void SynchronizeFromKeycloak(
+            string username,
+            string? email,
+            bool isEnabled)
+        {
+            if (IsDeleted)
+            {
+                throw new DomainException("user.deleted", "Cannot synchronize deleted user");
+            }
+
+            var isChanged = false;
+
+            if (!string.Equals(Username, username, StringComparison.Ordinal))
+            {
+                Username = username;
+                isChanged = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(email) && !string.Equals(Email, email, StringComparison.OrdinalIgnoreCase))
+            {
+                Email = email;
+                isChanged = true;
+            }
+
+            if (IsEnabled != isEnabled)
+            {
+                IsEnabled = isEnabled;
+                isChanged = true;
+            }
+
+            if (isChanged)
+            {
+                AddDomainEvent(new UserUpdatedDomainEvent(Id));
+            }
         }
 
     }

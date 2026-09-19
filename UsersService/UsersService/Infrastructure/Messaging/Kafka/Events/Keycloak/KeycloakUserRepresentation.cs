@@ -10,11 +10,11 @@ namespace UsersService.Infrastructure.Messaging.Kafka.Events.Keycloak
         [JsonPropertyName("username")]
         public string? Username { get; init; }
 
-        [JsonPropertyName("firstName")]
-        public string? FirstName { get; init; }
+        //[JsonPropertyName("firstName")]
+        //public string? FirstName { get; init; }
 
-        [JsonPropertyName("lastName")]
-        public string? LastName { get; init; }
+        //[JsonPropertyName("lastName")]
+        //public string? LastName { get; init; }
 
         [JsonPropertyName("email")]
         public string? Email { get; init; }

@@ -1,0 +1,51 @@
+groups:
+  - name: users-service
+    rules:
+
+      - alert: UsersServiceReconciliationErrors
+        expr: increase(reconciliation_errors_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: usersservice
+        annotations:
+          summary: "UsersService reconciliation errors"
+          description: >
+            UsersService reconciliation has failed at least once
+            during the last 15 minutes.
+
+      - alert: UsersServiceReconciliationNotRunning
+        expr: increase(reconciliation_runs_total[30m]) == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: usersservice
+        annotations:
+          summary: "UsersService reconciliation is not running"
+          description: >
+            No successful UsersService reconciliation has completed
+            during the last 30 minutes.
+
+      - alert: UsersServiceReconciliationMassDeletion
+        expr: increase(reconciliation_users_deleted_total[15m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: usersservice
+        annotations:
+          summary: "Mass user deletion detected"
+          description: >
+            More than 10 users were marked as deleted by
+            UsersService reconciliation during the last 15 minutes.
+
+      - alert: UsersServiceReconciliationMassCreation
+        expr: increase(reconciliation_users_created_total[15m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: usersservice
+        annotations:
+          summary: "Mass user creation detected"
+          description: >
+            More than 10 users were created by UsersService
+            reconciliation during the last 15 minutes.

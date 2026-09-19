@@ -38,6 +38,9 @@ namespace UsersService.Infrastructure.Messaging.Kafka.Events.Keycloak
 
             switch (adminEvent.OperationType)
             {
+                case "CREATE":
+                    await ProcessUserCreateAsync(adminEvent, ct);
+                    break;
                 case "UPDATE":
                     await ProcessUserUpdateAsync(adminEvent, ct);
                     break;
@@ -51,11 +54,40 @@ namespace UsersService.Infrastructure.Messaging.Kafka.Events.Keycloak
             }
         }
 
+        private async Task ProcessUserCreateAsync(KeycloakAdminEvent adminEvent, CancellationToken ct)
+        {
+            var userId = adminEvent.GetUserId();
+
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                throw new InvalidOperationException("Keycloak USER CREATE admin event does not contain a valid userId.");
+            }
+
+            if (string.IsNullOrWhiteSpace(adminEvent.Representation))
+            {
+                throw new InvalidOperationException("Keycloak USER CREATE admin event does not contain representation.");
+            }
+
+            var keycloakUser = JsonSerializer.Deserialize<KeycloakUserRepresentation>(adminEvent.Representation, JsonOptions.Default);
+
+            if (keycloakUser is null)
+            {
+                throw new InvalidOperationException("Failed to deserialize Keycloak user representation.");
+            }
+
+            await _userService.CreateFromKeycloakAsync(
+                new CreateUserFromKeycloakCommand(
+                    userId,
+                    keycloakUser.Username!,
+                    keycloakUser.Email!),
+                ct);
+        }
+
         private async Task ProcessUserUpdateAsync(KeycloakAdminEvent adminEvent, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(adminEvent.Representation))
             {
-                throw new InvalidOperationException("Keycloak USER UPDATE event does not contain representation.");
+                throw new InvalidOperationException("Keycloak USER UPDATE admin event does not contain representation.");
             }
 
             var keycloakUser = JsonSerializer.Deserialize<KeycloakUserRepresentation>(adminEvent.Representation, JsonOptions.Default);
@@ -115,7 +147,7 @@ namespace UsersService.Infrastructure.Messaging.Kafka.Events.Keycloak
 
             if (string.IsNullOrWhiteSpace(userId))
             {
-                throw new InvalidOperationException("Keycloak USER DELETE event does not contain a valid userId.");
+                throw new InvalidOperationException("Keycloak USER DELETE admin event does not contain a valid userId.");
             }
 
             await _userService.DeleteFromKeycloakAsync(userId, ct);

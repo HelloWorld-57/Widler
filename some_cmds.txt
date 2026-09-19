@@ -59,12 +59,11 @@ docker compose --profile observability up
 curl -i http://localhost:8081/api/v1/users
 curl -i http://localhost:5173/api/v1/users
 ----------------------------------------------
-
-
+docker ps --format "{{.Names}}"
 ----------------------------------------------
 mvn clean package -DskipTests
 ----------------------------------------------
-
+docker restart widler-prometheus-1
 ----------------------------------------------
 
 ----------------------------------------------

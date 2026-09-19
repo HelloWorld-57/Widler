@@ -8,6 +8,7 @@ services:
           - "9090:9090"
         volumes:
           - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+          - ./Prometheus/alerts:/etc/prometheus/alerts:ro
         depends_on:
           - usersservice
           - postsservice
