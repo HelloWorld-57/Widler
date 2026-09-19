@@ -17,10 +17,7 @@ namespace UsersService.Infrastructure.Messaging.Kafka.Processing
             _logger = logger;
         }
 
-        public async Task ProcessAsync(
-            string eventType,
-            string payload,
-            CancellationToken ct)
+        public async Task ProcessAsync(string eventType, string payload, CancellationToken ct)
         {
             int attempt = 0;
             Exception? last = null;
@@ -37,10 +34,7 @@ namespace UsersService.Infrastructure.Messaging.Kafka.Processing
                 {
                     last = ex;
 
-                    _logger.LogWarning(
-                        ex,
-                        "Integration handler failed. Attempt {Attempt}",
-                        attempt);
+                    _logger.LogWarning(ex, "Integration handler failed. Attempt {Attempt}", attempt);
 
                     await Task.Delay(CalculateBackoff(attempt), ct);
                 }

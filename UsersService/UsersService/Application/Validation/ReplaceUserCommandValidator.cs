@@ -19,10 +19,6 @@ namespace UsersService.Application.Validation
                 .NotEmpty()
                 .MaximumLength(200);
 
-            RuleFor(x => x.Email)
-                .NotEmpty()
-                .MaximumLength(200);
-
             RuleFor(x => x.BirthDate)
                 .NotEmpty();
         }

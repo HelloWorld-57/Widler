@@ -4,6 +4,7 @@ using PostsService.Infrastructure.Events.Kafka.Messages.Posts.v1;
 using PostsService.Infrastructure.Exceptions;
 using PostsService.Infrastructure.Messaging.Kafka.Events;
 using PostsService.Infrastructure.Messaging.Kafka.Serialization;
+using PostsService.Infrastructure.Observability;
 using PostsService.Infrastructure.Telemetry;
 using System.Diagnostics;
 using System.Text;
@@ -42,9 +43,22 @@ namespace PostsService.Infrastructure.Messaging.Kafka.Producer
             string key,
             T payload,
             IDictionary<string, string> headers,
+            string? traceParent,
+            string? traceState,
+            string? correlationId,
             CancellationToken ct)
         {
-            using var activity = Tracing.ActivitySource.StartActivity("Kafka.Publish", ActivityKind.Producer);
+            ActivityContext parentContext = default;
+
+            if (!string.IsNullOrWhiteSpace(traceParent))
+            {
+                ActivityContext.TryParse(
+                    traceParent,
+                    traceState,
+                    out parentContext);
+            }
+
+            using var activity = Tracing.ActivitySource.StartActivity("Kafka.Publish", ActivityKind.Producer, parentContext);
             activity?.SetTag("messaging.system", "kafka");
             activity?.SetTag("messaging.destination", topic);
 
@@ -62,14 +76,24 @@ namespace PostsService.Infrastructure.Messaging.Kafka.Producer
                 msg.Headers.Add(kv.Key, Encoding.UTF8.GetBytes(kv.Value));
             }
 
-            if (!string.IsNullOrEmpty(Activity.Current?.Id))
+            if (activity is not null)
             {
-                msg.Headers.Add("traceparent", Encoding.UTF8.GetBytes(Activity.Current.Id));
+                msg.Headers.Add("traceparent", Encoding.UTF8.GetBytes(activity.Id!));
+                
+                if (!string.IsNullOrWhiteSpace(activity.TraceStateString))
+                {
+                    msg.Headers.Add("tracestate", Encoding.UTF8.GetBytes(activity.TraceStateString));
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(correlationId))
+            {
+                msg.Headers.Add(CorrelationHeaders.CorrelationId, Encoding.UTF8.GetBytes(correlationId));
             }
 
             try
             {
-                var res = await _producer.ProduceAsync(topic, msg);
+                var res = await _producer.ProduceAsync(topic, msg, ct);
                 _logger.LogInformation("Kafka: produced message to {TopicName}: {Message}", topic, json);
             }
             catch (Exception ex)
@@ -85,7 +109,7 @@ namespace PostsService.Infrastructure.Messaging.Kafka.Producer
             }
         }
 
-        public Task PublishPostCreatedAsync(PostCreatedV1 evt, CancellationToken ct)
+        public Task PublishPostCreatedAsync(PostCreatedV1 evt, string? traceParent, string? traceState, string? correlationId, CancellationToken ct)
         => PublishAsync(
             topic: _topics.Posts,
             key: evt.PostId,
@@ -94,9 +118,12 @@ namespace PostsService.Infrastructure.Messaging.Kafka.Producer
             {
                 ["event-type"] = IntegrationEventNames.Posts.CreatedV1
             },
+            traceParent,
+            traceState,
+            correlationId,
             ct);
 
-        public Task PublishPostUpdatedAsync(PostUpdatedV1 evt, CancellationToken ct)
+        public Task PublishPostUpdatedAsync(PostUpdatedV1 evt, string? traceParent, string? traceState, string? correlationId, CancellationToken ct)
         => PublishAsync(
             topic: _topics.Posts,
             key: evt.PostId,
@@ -105,9 +132,12 @@ namespace PostsService.Infrastructure.Messaging.Kafka.Producer
             {
                 ["event-type"] = IntegrationEventNames.Posts.UpdatedV1
             },
+            traceParent,
+            traceState,
+            correlationId,
             ct);
 
-        public Task PublishPostDeletedAsync(PostDeletedV1 evt, CancellationToken ct)
+        public Task PublishPostDeletedAsync(PostDeletedV1 evt, string? traceParent, string? traceState, string? correlationId, CancellationToken ct)
         => PublishAsync(
             topic: _topics.Posts,
             key: evt.PostId,
@@ -116,6 +146,9 @@ namespace PostsService.Infrastructure.Messaging.Kafka.Producer
             {
                 ["event-type"] = IntegrationEventNames.Posts.DeletedV1
             },
+            traceParent,
+            traceState,
+            correlationId,
             ct);
 
         public void Dispose() => _producer?.Dispose();

@@ -1,0 +1,200 @@
+x-dotnet-service: &dotnet-service
+  restart: unless-stopped
+  networks:
+    - appnet
+  environment:
+    ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+    APPLY_MIGRATIONS: "false"
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "5"
+      
+x-web-service: &web-service
+  restart: unless-stopped
+  networks:
+    - appnet
+
+services:
+  usersservice_migrations:
+    networks:
+        - appnet
+    build:
+        context: ./UsersService/UsersService
+        dockerfile: Dockerfile
+    command:
+        - dotnet
+        - UsersService.dll
+        - --migrate
+    depends_on:
+        postgres_users:
+          condition: service_healthy
+    restart: "no"
+    environment:
+          ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+          ConnectionStrings__DefaultConnection: Host=postgres_users;Port=5432;Database=${USERS_DB};Username=${USERS_USER};Password=${USERS_PASSWORD}
+
+  usersservice:
+    <<: *dotnet-service
+    build:
+        context: ./UsersService/UsersService
+        dockerfile: Dockerfile
+    environment:
+        ConnectionStrings__DefaultConnection: Host=postgres_users;Port=5432;Database=${USERS_DB};Username=${USERS_USER};Password=${USERS_PASSWORD}
+        Keycloak__Admin__BaseUrl: http://keycloak:8080
+        Keycloak__Admin__Realm: widler
+        Keycloak__Admin__ClientId: users-service-sync
+        Keycloak__Admin__ClientSecret: ${KEYCLOAK_SYNC_CLIENT_SECRET}
+        Keycloak__Reconciliation__IntervalMinutes: ${KEYCLOAK_RECONCILIATION_INTERVAL_MINUTES:-15}
+    depends_on:
+        usersservice_migrations:
+          condition: service_completed_successfully
+
+        kafka:
+          condition: service_healthy
+
+        kafka_init:
+          condition: service_completed_successfully
+          
+        keycloak:
+          condition: service_started
+    healthcheck:
+        test:
+          [
+            "CMD-SHELL",
+            "curl -f http://localhost/health || exit 1"
+          ]
+        interval: 10s
+        timeout: 3s
+        retries: 5
+        start_period: 20s
+    stop_grace_period: 30s
+
+  postsservice_migrations:
+    build:
+      context: ./PostsService/PostsService
+      dockerfile: Dockerfile
+    command:
+      - dotnet
+      - PostsService.dll
+      - --migrate
+    restart: "no"
+    depends_on:
+      postgres_posts:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      ConnectionStrings__DefaultConnection: Host=postgres_posts;Port=5432;Database=${POSTS_DB};Username=${POSTS_USER};Password=${POSTS_PASSWORD}
+    networks:
+      - appnet
+
+  postsservice:
+    <<: *dotnet-service
+    build:
+        context: ./PostsService/PostsService
+        dockerfile: Dockerfile
+    environment:
+        ConnectionStrings__DefaultConnection: Host=postgres_posts;Port=5432;Database=${POSTS_DB};Username=${POSTS_USER};Password=${POSTS_PASSWORD}
+    depends_on:
+        postsservice_migrations:
+          condition: service_completed_successfully
+
+        kafka:
+          condition: service_healthy
+
+        kafka_init:
+          condition: service_completed_successfully
+
+    healthcheck:
+        test:
+          [
+            "CMD-SHELL",
+            "curl -f http://localhost/health || exit 1"
+          ]
+        interval: 10s
+        timeout: 3s
+        retries: 5
+        start_period: 20s
+
+    stop_grace_period: 30s
+  
+  keycloak:
+    #image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}
+    build:
+      context: .
+      dockerfile: Keycloak.Dockerfile
+    command:
+      - start-dev
+      - --import-realm
+    restart: unless-stopped
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      
+      KC_SPI_EVENTS_LISTENER_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KC_SPI_EVENTS_LISTENER_KAFKA_TOPIC_USER: "keycloak.user.events"
+      KC_SPI_EVENTS_LISTENER_KAFKA_TOPIC_ADMIN: "keycloak.admin.events"
+      
+      KC_SPI_EVENTS_LISTENER_KAFKA_USER_EVENTS: "REGISTER,UPDATE_EMAIL,DELETE_ACCOUNT,USER_DISABLED_BY_PERMANENT_LOCKOUT" #,USER_DISABLED_BY_TEMPORARY_LOCKOUT
+      KC_SPI_EVENTS_LISTENER_KAFKA_ADMIN_EVENTS: "CREATE:USER,UPDATE:USER,DELETE:USER"
+      
+      KC_SPI_EVENTS_LISTENER_KAFKA_ENABLE_USER_EVENTS: "true"
+      KC_SPI_EVENTS_LISTENER_KAFKA_ENABLE_ADMIN_EVENTS: "true"
+      KC_SPI_EVENTS_LISTENER_KAFKA_SYNC: "false"
+      KC_SPI_EVENTS_LISTENER_KAFKA_PRODUCER_ACKS: all
+      KC_SPI_EVENTS_LISTENER_KAFKA_PRODUCER_RETRIES: "5"
+      KC_SPI_EVENTS_LISTENER_KAFKA_PRODUCER_ENABLE_IDEMPOTENCE: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./Keycloak:/opt/keycloak/data/import:ro
+    networks:
+      - appnet
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/8080"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+      
+  api_gateway:
+    <<: *dotnet-service
+    build:
+      context: ./ApiGateway/ApiGateway
+      dockerfile: Dockerfile
+    environment:
+      Keycloak__Authority: http://keycloak:8080/realms/widler
+      Keycloak__Issuer: http://localhost:8080/realms/widler
+      Keycloak__Audience: widler-api
+      Keycloak__RequireHttpsMetadata: "false"
+    ports:
+      - "8081:80"
+    depends_on:
+      usersservice:
+        condition: service_healthy
+      postsservice:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5 
+      start_period: 20s
+    stop_grace_period: 30s
+      
+  react_web_client:
+    <<: *web-service
+    build: 
+        context: ./ReactWebClient
+    ports:
+      - "5173:80"
+    depends_on:
+      api_gateway:
+        condition: service_healthy

@@ -46,11 +46,30 @@ namespace PostsService.Infrastructure.Messaging.Kafka.Processing
             using var scope = _services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<PostsDbContext>();
 
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+
             var messages = await db.OutboxMessages
-                .Where(x => x.ProcessedAt == null && x.Attempts < 10)
-                .OrderBy(x => x.OccurredAt)
-                .Take(20)
+                .FromSqlRaw("""
+                    WITH cte AS
+                    (
+                        SELECT id
+                        FROM outbox_messages
+                        WHERE processed_at  IS NULL
+                          AND attempts < 10
+                          AND (locked_until  IS NULL OR locked_until  < NOW())
+                        ORDER BY occurred_at
+                        LIMIT 20
+                        FOR UPDATE SKIP LOCKED
+                    )
+                    UPDATE outbox_messages o
+                    SET locked_until  = NOW() + INTERVAL '30 seconds'
+                    FROM cte
+                    WHERE o.id = cte.id
+                    RETURNING o.*;
+                    """)
                 .ToListAsync(ct);
+
+            await tx.CommitAsync(ct);
 
             foreach (var msg in messages)
             {
@@ -58,12 +77,14 @@ namespace PostsService.Infrastructure.Messaging.Kafka.Processing
                 {
                     await PublishOutboxMessageAsync(msg, ct);
                     msg.ProcessedAt = DateTime.UtcNow;
+                    msg.LockedUntil = null;
 
                     Metrics.OutboxProcessed.Add(1);
                 }
                 catch (Exception ex)
                 {
                     msg.Attempts++;
+                    msg.LockedUntil = null;
 
                     _logger.LogError(
                         ex,
@@ -85,19 +106,19 @@ namespace PostsService.Infrastructure.Messaging.Kafka.Processing
                 case IntegrationEventNames.Posts.CreatedV1:
                     {
                         var evt = JsonSerializer.Deserialize<PostCreatedV1>(msg.Payload, JsonOptions.Default)!;
-                        await _producer.PublishPostCreatedAsync(evt, ct);
+                        await _producer.PublishPostCreatedAsync(evt, msg.TraceParent, msg.TraceState, msg.CorrelationId, ct);
                         break;
                     }
                 case IntegrationEventNames.Posts.UpdatedV1:
                     {
                         var evt = JsonSerializer.Deserialize<PostUpdatedV1>(msg.Payload, JsonOptions.Default)!;
-                        await _producer.PublishPostUpdatedAsync(evt, ct);
+                        await _producer.PublishPostUpdatedAsync(evt, msg.TraceParent, msg.TraceState, msg.CorrelationId, ct);
                         break;
                     }
                 case IntegrationEventNames.Posts.DeletedV1:
                     {
                         var evt = JsonSerializer.Deserialize<PostDeletedV1>(msg.Payload, JsonOptions.Default)!;
-                        await _producer.PublishPostDeletedAsync(evt, ct);
+                        await _producer.PublishPostDeletedAsync(evt, msg.TraceParent, msg.TraceState, msg.CorrelationId, ct);
                         break;
                     }
                 default:

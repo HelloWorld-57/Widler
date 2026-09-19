@@ -13,9 +13,6 @@ namespace PostsService.Application.Validation
 
             RuleFor(x => x.Content)
                 .NotEmpty();
-
-            RuleFor(x => x.UserId)
-                .NotEmpty();
         }
     }
 }

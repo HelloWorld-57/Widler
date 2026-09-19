@@ -6,6 +6,7 @@
         string SecondName,
         string Email,
         DateTime BirthDate,
-        DateTime CreationDate
+        DateTime CreationDate,
+        bool IsEnabled
     );
 }

@@ -1,5 +1,8 @@
 @echo off
 echo Up...
-docker compose up
+docker compose ^
+  -f compose.yml ^
+  -f compose.app.yml ^
+  -f compose.observability.yml up
 echo Done.
 pause

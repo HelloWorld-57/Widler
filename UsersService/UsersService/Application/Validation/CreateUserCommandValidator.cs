@@ -7,20 +7,17 @@ namespace UsersService.Application.Validation
     {
         public CreateUserCommandValidator()
         {
-            RuleFor(x => x.Name)
+            RuleFor(x => x.Id)
                 .NotEmpty()
                 .MaximumLength(200);
 
-            RuleFor(x => x.SecondName)
+            RuleFor(x => x.Username)
                 .NotEmpty()
                 .MaximumLength(200);
 
             RuleFor(x => x.Email)
                 .NotEmpty()
                 .MaximumLength(200);
-
-            RuleFor(x => x.BirthDate)
-                .NotEmpty();
         }
     }
 }

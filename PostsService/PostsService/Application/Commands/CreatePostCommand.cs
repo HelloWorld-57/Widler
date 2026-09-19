@@ -2,7 +2,6 @@
 {
     public record CreatePostCommand(
         string Caption,
-        string Content,
-        string UserId
+        string Content
     );
 }

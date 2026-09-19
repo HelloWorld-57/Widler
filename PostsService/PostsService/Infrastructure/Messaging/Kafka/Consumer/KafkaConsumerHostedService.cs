@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using PostsService.Application.Messaging;
+using PostsService.Infrastructure.Common;
 using PostsService.Infrastructure.Db.Extensions;
 using PostsService.Infrastructure.Db.Inbox;
 using PostsService.Infrastructure.Messaging.Kafka.Dlq;
@@ -173,25 +174,49 @@ namespace PostsService.Infrastructure.Messaging.Kafka.Consumer
 
         private static IDisposable CreateLogScope(ConsumeResult<string, string> cr)
         {
-            return LogContext.PushProperty("TraceId", Activity.Current?.TraceId.ToString());
+            var traceId = Activity.Current?.TraceId.ToString();
+            var correlationId = ExtractCorrelationId(cr.Message.Headers);
+
+            return new CompositeDisposable(
+                LogContext.PushProperty("TraceId", traceId),
+                LogContext.PushProperty("CorrelationId", correlationId));
         }
 
         private static ActivityContext? ExtractActivityContext(Headers headers)
         {
-            if (headers.TryGetLastBytes("traceparent", out var traceParentBytes))
+            if (!headers.TryGetLastBytes("traceparent", out var traceParentBytes))
             {
-                var traceParent = Encoding.UTF8.GetString(traceParentBytes);
-
-                if (ActivityContext.TryParse(
-                        traceParent,
-                        null,
-                        out var context))
-                {
-                    return context;
-                }
+                return null;
             }
 
+            var traceParent = Encoding.UTF8.GetString(traceParentBytes);
+
+            string? traceState = null;
+
+            if (headers.TryGetLastBytes("tracestate", out var traceStateBytes))
+            {
+                traceState = Encoding.UTF8.GetString(traceStateBytes);
+            }
+
+            if (ActivityContext.TryParse(
+                    traceParent,
+                    traceState,
+                    out var context))
+            {
+                return context;
+            }
+            
             return null;
+        }
+
+        private static string? ExtractCorrelationId(Headers headers)
+        {
+            if (!headers.TryGetLastBytes(CorrelationHeaders.CorrelationId, out var correlationIdBytes))
+            {
+                return null;
+            }
+
+            return Encoding.UTF8.GetString(correlationIdBytes);
         }
 
         private static string BuildMessageId(ConsumeResult<string, string> cr)
