@@ -10,7 +10,7 @@ namespace PostsService.Infrastructure.Observability
 
         public static readonly Counter<long> DlqMessages = Meter.CreateCounter<long>("dlq_messages_total");
 
-        public static readonly Histogram<double> OutboxProcessingDuration = Meter.CreateHistogram<double>("outbox_processing_duration_ms", unit: "ms");
+        public static readonly Histogram<double> OutboxProcessingDuration = Meter.CreateHistogram<double>("outbox_processing_duration", unit: "ms");
 
         private static int _outboxSize;
         public static readonly ObservableGauge<int> OutboxSize = Meter.CreateObservableGauge("outbox_size", () => _outboxSize);

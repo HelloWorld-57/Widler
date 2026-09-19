@@ -42,6 +42,11 @@ services:
         dockerfile: Dockerfile
     environment:
         ConnectionStrings__DefaultConnection: Host=postgres_users;Port=5432;Database=${USERS_DB};Username=${USERS_USER};Password=${USERS_PASSWORD}
+        Keycloak__Admin__BaseUrl: http://keycloak:8080
+        Keycloak__Admin__Realm: widler
+        Keycloak__Admin__ClientId: users-service-sync
+        Keycloak__Admin__ClientSecret: ${KEYCLOAK_SYNC_CLIENT_SECRET}
+        Keycloak__Reconciliation__IntervalMinutes: ${KEYCLOAK_RECONCILIATION_INTERVAL_MINUTES:-15}
     depends_on:
         usersservice_migrations:
           condition: service_completed_successfully
@@ -51,6 +56,9 @@ services:
 
         kafka_init:
           condition: service_completed_successfully
+          
+        keycloak:
+          condition: service_started
     healthcheck:
         test:
           [

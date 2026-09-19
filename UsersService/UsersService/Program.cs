@@ -2,7 +2,9 @@ using Asp.Versioning;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -14,9 +16,11 @@ using UsersService.Application.Interfaces;
 using UsersService.Application.Messaging;
 using UsersService.Application.Services;
 using UsersService.Application.Validation;
+using UsersService.Infrastructure.BackgroundServices;
 using UsersService.Infrastructure.Db;
 using UsersService.Infrastructure.Db.Inbox;
 using UsersService.Infrastructure.Db.Outbox;
+using UsersService.Infrastructure.Keycloak;
 using UsersService.Infrastructure.Messaging.Kafka;
 using UsersService.Infrastructure.Messaging.Kafka.Consumer;
 using UsersService.Infrastructure.Messaging.Kafka.Dlq;
@@ -100,6 +104,8 @@ var keycloakIssuer = builder.Configuration["Keycloak:Issuer"]
 
 var requireHttpsMetadata = builder.Configuration.GetValue<bool>("Keycloak:RequireHttpsMetadata");
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                    ?? throw new InvalidOperationException("DefaultConnection is not configured.");
 
 builder.Services.AddScoped<OutboxSaveChangesInterceptor>();
 builder.Services.AddDbContext<UsersDbContext>((sp, options) =>
@@ -108,6 +114,13 @@ builder.Services.AddDbContext<UsersDbContext>((sp, options) =>
     options.AddInterceptors(interceptor);
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
            .UseSnakeCaseNamingConvention();
+});
+
+builder.Services.AddSingleton<NpgsqlDataSource>(_ =>
+{
+    var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+
+    return dataSourceBuilder.Build();
 });
 
 builder.Services.Configure<KafkaTopics>(builder.Configuration.GetSection("Kafka:Topics"));
@@ -127,6 +140,9 @@ builder.Services.AddSingleton<IDlqProducer, KafkaDlqProducer>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
+builder.Services.AddScoped<IUserReconciliationService, UserReconciliationService>();
+builder.Services.AddSingleton<IReconciliationLock, PostgresReconciliationLock>();
+
 //builder.Services.AddScoped<IIntegrationEventHandler<UserDeletedV1>, UserDeletedProcessManager>();
 builder.Services.AddSingleton<IIntegrationEventRouter, IntegrationEventRouter>();
 
@@ -144,6 +160,30 @@ builder.Services.AddScoped<ICorrelationContext, CorrelationContext>();
 
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<IUserAuthorization, UserAuthorization>();
+
+builder.Services.AddOptions<KeycloakOptions>()
+    .Bind(builder.Configuration.GetSection(KeycloakOptions.SectionName))
+    .Validate(options => !string.IsNullOrWhiteSpace(options.BaseUrl), "Keycloak Admin BaseUrl is required")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.Realm), "Keycloak Admin Realm is required")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.ClientId), "Keycloak Admin ClientId is required")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.ClientSecret), "Keycloak Admin ClientSecret is required")
+    .ValidateOnStart();
+
+builder.Services.AddOptions<KeycloakReconciliationOptions>()
+    .Bind(builder.Configuration.GetSection(KeycloakReconciliationOptions.SectionName))
+    .Validate(options => options.IntervalMinutes > 0, "Keycloak reconciliation interval must be greater than zero.")
+    .ValidateOnStart();
+
+builder.Services.AddHttpClient<IKeycloakUserClient, KeycloakUserClient>(
+    (sp, client) =>
+    {
+        var options = sp.GetRequiredService<IOptions<KeycloakOptions>>().Value;
+
+        client.BaseAddress = new Uri(options.BaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(30);
+    });
+
+builder.Services.AddHostedService<UserReconciliationWorker>();
 
 builder.Services.AddOpenApi();
 

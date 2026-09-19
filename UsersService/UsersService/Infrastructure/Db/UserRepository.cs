@@ -16,8 +16,24 @@ namespace UsersService.Infrastructure.Db
         public async Task<IEnumerable<User>> GetAllAsync()
             => await _db.Users.ToListAsync();
 
+        public async Task<IReadOnlyCollection<User>> GetAllIncludingDeletedAsync(CancellationToken ct = default)
+        {
+            return await _db.Users
+                .IgnoreQueryFilters()
+                .ToListAsync(ct);
+        }
+
         public async Task<User?> GetByIdAsync(string id)
             => await _db.Users.FindAsync(id);
+
+        public async Task<User?> GetByIdIncludingDeletedAsync(string id, CancellationToken ct = default)
+        {
+            return await _db.Users
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(
+                    user => user.Id == id,
+                    ct);
+        }
 
         public async Task AddAsync(User user)
         {

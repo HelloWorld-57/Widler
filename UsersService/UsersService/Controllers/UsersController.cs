@@ -17,10 +17,13 @@ namespace UsersService.Controllers
         private readonly IUserService _userService;
         private readonly ICurrentUser _currentUser;
 
-        public UsersController(IUserService userService, ICurrentUser currentUser)
+        private readonly IUserReconciliationService _reconciliation;
+
+        public UsersController(IUserService userService, ICurrentUser currentUser, IUserReconciliationService reconciliation)
         {
             _userService = userService;
             _currentUser = currentUser;
+            _reconciliation = reconciliation;
         }
 
         // GET api/users
@@ -97,5 +100,18 @@ namespace UsersService.Controllers
             await _userService.DeleteAsync(id);
             return NoContent();
         }
+
+        // debug
+        [HttpGet("debug")]
+        public async Task<IActionResult> DebugAsync()
+        {
+            await _reconciliation.ReconcileAsync(CancellationToken.None);
+
+            return Ok(new
+            {
+                abc = "abc"
+            });
+        }
+
     }
 }
