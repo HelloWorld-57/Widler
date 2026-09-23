@@ -16,41 +16,53 @@ namespace UsersService.Application.Services
         private readonly ICurrentUser _currentUser;
         private readonly IUserAuthorization _authorization;
         private readonly ILogger<UserService> _logger;
+        private readonly IUserCache _userCache;
 
         public UserService(
             IUserRepository repo, 
             IValidatorRunner validator, 
             ICurrentUser currentUser, 
             IUserAuthorization authorization, 
-            ILogger<UserService> logger)
+            ILogger<UserService> logger, 
+            IUserCache userCache)
         {
             _repo = repo;
             _validator = validator;
             _currentUser = currentUser;
             _authorization = authorization;
             _logger = logger;
+            _userCache = userCache;
         }
 
-        public async Task<IReadOnlyCollection<UserResponse>> GetAllAsync()
+        public async Task<IReadOnlyCollection<UserResponse>> GetAllAsync(CancellationToken ct)
         {
             using var activity = Tracing.ActivitySource.StartActivity("UsersService.GetAll");
             
-            var users = await _repo.GetAllAsync();
+            var users = await _repo.GetAllAsync(ct);
 
             return users.Select(MapToResponse).ToList();
         }
 
-        public async Task<UserResponse> GetByIdAsync(string id)
+        public async Task<UserResponse> GetByIdAsync(string id, CancellationToken ct)
         {
             using var activity = Tracing.ActivitySource.StartActivity("UsersService.GetById");
             activity?.SetTag("user.id", id);
 
-            var user = await _repo.GetByIdAsync(id);
+            var cachedUser = await _userCache.GetAsync(id, ct);
+
+            if (cachedUser is not null)
+            {
+                return MapToResponse(cachedUser);
+            }
+
+            var user = await _repo.GetByIdAsync(id, ct);
 
             if (user == null)
             {
                 throw new NotFoundException(nameof(user), id);
             }
+
+            await _userCache.SetAsync(user, ct);
 
             return MapToResponse(user);
         }
@@ -73,14 +85,14 @@ namespace UsersService.Application.Services
         //    return user.Id;
         //}
 
-        public async Task UpdateAsync(UpdateUserCommand cmd)
+        public async Task UpdateAsync(UpdateUserCommand cmd, CancellationToken ct)
         {
             using var activity = Tracing.ActivitySource.StartActivity("UsersService.Update");
             activity?.SetTag("user.id", cmd.UserId);
 
             await _validator.ValidateAsync(cmd);
 
-            var user = await _repo.GetByIdAsync(cmd.UserId)
+            var user = await _repo.GetByIdAsync(cmd.UserId, ct)
                 ?? throw new NotFoundException(nameof(User), cmd.UserId);
 
             if (!_authorization.CanUpdate(user))
@@ -90,17 +102,19 @@ namespace UsersService.Application.Services
 
             user.Update(cmd.Name, cmd.SecondName, cmd.BirthDate);
 
-            await _repo.SaveChangesAsync();
+            await _repo.SaveChangesAsync(ct);
+
+            await _userCache.SetAsync(user, ct);
         }
 
-        public async Task ReplaceAsync(ReplaceUserCommand cmd)
+        public async Task ReplaceAsync(ReplaceUserCommand cmd, CancellationToken ct)
         {
             using var activity = Tracing.ActivitySource.StartActivity("UsersService.Replace");
             activity?.SetTag("user.id", cmd.UserId);
 
             await _validator.ValidateAsync(cmd);
 
-            var user = await _repo.GetByIdAsync(cmd.UserId) 
+            var user = await _repo.GetByIdAsync(cmd.UserId, ct) 
                 ?? throw new NotFoundException(nameof(User), cmd.UserId);
 
             if (!_authorization.CanUpdate(user))
@@ -110,15 +124,17 @@ namespace UsersService.Application.Services
 
             user.Replace(cmd.Name, cmd.SecondName, cmd.BirthDate);
 
-            await _repo.SaveChangesAsync();
+            await _repo.SaveChangesAsync(ct);
+
+            await _userCache.SetAsync(user, ct);
         }
 
-        public async Task DeleteAsync(string id)
+        public async Task DeleteAsync(string id, CancellationToken ct)
         {
             using var activity = Tracing.ActivitySource.StartActivity("UsersService.Delete");
             activity?.SetTag("user.id", id);
 
-            var user = await _repo.GetByIdAsync(id)
+            var user = await _repo.GetByIdAsync(id, ct)
                 ?? throw new NotFoundException(nameof(User), id);
 
             if (!_authorization.CanDelete(user))
@@ -128,7 +144,9 @@ namespace UsersService.Application.Services
 
             user.Delete();
 
-            await _repo.SaveChangesAsync();
+            await _repo.SaveChangesAsync(ct);
+
+            await _userCache.RemoveAsync(id, ct);
         }
 
         public async Task CreateFromKeycloakAsync(CreateUserFromKeycloakCommand cmd, CancellationToken ct)
@@ -138,7 +156,7 @@ namespace UsersService.Application.Services
             activity?.SetTag("user.id", cmd.UserId);
             activity?.SetTag("identity.provider", "keycloak");
 
-            var existingUser = await _repo.GetByIdAsync(cmd.UserId);
+            var existingUser = await _repo.GetByIdAsync(cmd.UserId, ct);
 
             if (existingUser is not null)
             {
@@ -163,7 +181,7 @@ namespace UsersService.Application.Services
             activity?.SetTag("user.id", cmd.UserId);
             activity?.SetTag("identity.provider", "keycloak");
 
-            var user = await _repo.GetByIdAsync(cmd.UserId);
+            var user = await _repo.GetByIdAsync(cmd.UserId, ct);
 
             if (user is null)
             {
@@ -181,6 +199,8 @@ namespace UsersService.Application.Services
 
             await _repo.SaveChangesAsync(ct);
 
+            await _userCache.SetAsync(user, ct);
+
             _logger.LogInformation("User email synchronized from Keycloak. UserId={UserId}", cmd.UserId);
         }
 
@@ -191,7 +211,7 @@ namespace UsersService.Application.Services
             activity?.SetTag("user.id", userId);
             activity?.SetTag("identity.provider", "keycloak");
 
-            var user = await _repo.GetByIdAsync(userId);
+            var user = await _repo.GetByIdAsync(userId, ct);
 
             if (user is null)
             {
@@ -218,6 +238,8 @@ namespace UsersService.Application.Services
 
             await _repo.SaveChangesAsync(ct);
 
+            await _userCache.SetAsync(user, ct);
+
             _logger.LogInformation("User enabled because user was enabled in Keycloak. UserId={UserId}", userId);
         }
 
@@ -228,7 +250,7 @@ namespace UsersService.Application.Services
             activity?.SetTag("user.id", userId);
             activity?.SetTag("identity.provider", "keycloak");
 
-            var user = await _repo.GetByIdAsync(userId);
+            var user = await _repo.GetByIdAsync(userId, ct);
 
             if (user is null)
             {
@@ -255,6 +277,8 @@ namespace UsersService.Application.Services
 
             await _repo.SaveChangesAsync(ct);
 
+            await _userCache.SetAsync(user, ct);
+
             _logger.LogInformation("User disabled because user was disabled in Keycloak. UserId={UserId}", userId);
         }
 
@@ -265,7 +289,7 @@ namespace UsersService.Application.Services
             activity?.SetTag("user.id", userId);
             activity?.SetTag("identity.provider", "keycloak");
 
-            var user = await _repo.GetByIdAsync(userId);
+            var user = await _repo.GetByIdAsync(userId, ct);
 
             if (user is null)
             {
@@ -284,6 +308,8 @@ namespace UsersService.Application.Services
             user.DeleteFromKeycloak();
 
             await _repo.SaveChangesAsync(ct);
+
+            await _userCache.RemoveAsync(userId, ct);
 
             _logger.LogInformation("User soft deleted because user was deleted in Keycloak. UserId={UserId}", userId);
         }

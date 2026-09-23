@@ -13,11 +13,11 @@ namespace PostsService.Infrastructure.Db
             _db = db;
         }
 
-        public async Task<IEnumerable<Post>> GetAllAsync()
-            => await _db.Posts.ToListAsync();
+        public async Task<IEnumerable<Post>> GetAllAsync(CancellationToken ct = default)
+            => await _db.Posts.ToListAsync(ct);
 
-        public async Task<Post?> GetByIdAsync(string id)
-            => await _db.Posts.FindAsync(id);
+        public async Task<Post?> GetByIdAsync(string id, CancellationToken ct = default)
+            => await _db.Posts.FindAsync(id, ct);
 
         public async Task AddAsync(Post post)
         {

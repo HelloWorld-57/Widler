@@ -1,6 +1,7 @@
 ﻿using PostsService.Domain.Common;
 using PostsService.Domain.Events.v1;
 using PostsService.Domain.Exceptions;
+using static PostsService.Infrastructure.Messaging.Kafka.Events.IntegrationEventNames;
 
 namespace PostsService.Domain.Entities
 {
@@ -30,6 +31,27 @@ namespace PostsService.Domain.Entities
             CreationDate = DateTime.UtcNow;
 
             AddDomainEvent(new PostCreatedDomainEvent(Id, userId));
+        }
+
+        public static Post CreateFromCache(
+            string id,
+            string? caption,
+            string? content,
+            string? userId,
+            DateTime creationDate,
+            bool isDeleted,
+            DateTime? deletedAt)
+        {
+            return new Post
+            {
+                Id = id,
+                Caption = caption ?? string.Empty,
+                Content = content ?? string.Empty,
+                UserId = userId ?? string.Empty,
+                CreationDate = creationDate,
+                IsDeleted = isDeleted,
+                DeletedAt = deletedAt
+            };
         }
 
         public void Update(string? caption, string? content)

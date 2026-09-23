@@ -13,8 +13,8 @@ namespace UsersService.Infrastructure.Db
             _db = db;
         }
 
-        public async Task<IEnumerable<User>> GetAllAsync()
-            => await _db.Users.ToListAsync();
+        public async Task<IEnumerable<User>> GetAllAsync(CancellationToken ct = default)
+            => await _db.Users.ToListAsync(ct);
 
         public async Task<IReadOnlyCollection<User>> GetAllIncludingDeletedAsync(CancellationToken ct = default)
         {
@@ -23,8 +23,8 @@ namespace UsersService.Infrastructure.Db
                 .ToListAsync(ct);
         }
 
-        public async Task<User?> GetByIdAsync(string id)
-            => await _db.Users.FindAsync(id);
+        public async Task<User?> GetByIdAsync(string id, CancellationToken ct = default)
+            => await _db.Users.FindAsync(id, ct);
 
         public async Task<User?> GetByIdIncludingDeletedAsync(string id, CancellationToken ct = default)
         {
