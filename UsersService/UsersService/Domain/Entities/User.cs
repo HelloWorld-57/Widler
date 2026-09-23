@@ -37,6 +37,33 @@ namespace UsersService.Domain.Entities
             AddDomainEvent(new UserCreatedDomainEvent(Id));
         }
 
+        public static User CreateFromCache(
+            string id,
+            string email,
+            string username,
+            string? name,
+            string? secondName,
+            DateTime? birthDate,
+            DateTime creationDate,
+            bool isEnabled,
+            bool isDeleted,
+            DateTime? deletedAt)
+        {
+            return new User
+            {
+                Id = id,
+                Email = email,
+                Username = username,
+                Name = name,
+                SecondName = secondName,
+                BirthDate = birthDate,
+                CreationDate = creationDate,
+                IsEnabled = isEnabled,
+                IsDeleted = isDeleted,
+                DeletedAt = deletedAt
+            };
+        }
+
         //public User(string id, string name, string secondName, string username, string email, DateTime birthDate)
         //{
         //    Id = id;

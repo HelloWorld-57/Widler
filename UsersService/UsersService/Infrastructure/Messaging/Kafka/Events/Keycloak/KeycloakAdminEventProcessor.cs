@@ -102,7 +102,7 @@ namespace UsersService.Infrastructure.Messaging.Kafka.Events.Keycloak
                 throw new InvalidOperationException("Keycloak user representation does not contain id.");
             }
 
-            var user = await _userService.GetByIdAsync(keycloakUser.Id);
+            var user = await _userService.GetByIdAsync(keycloakUser.Id, ct);
 
             if (user.IsEnabled != keycloakUser.Enabled)
             {

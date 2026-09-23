@@ -25,29 +25,30 @@ namespace PostsService.Controllers
 
         // GET api/posts
         [HttpGet]
-        public async Task<ActionResult<IReadOnlyCollection<PostResponse>>> GetAll()
+        public async Task<ActionResult<IReadOnlyCollection<PostResponse>>> GetAll(CancellationToken ct)
         {
-            var posts = await _postService.GetAllAsync();
+            var posts = await _postService.GetAllAsync(ct);
             return Ok(posts);
         }
 
         // GET api/posts/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<PostResponse>> GetById(string id)
+        public async Task<ActionResult<PostResponse>> GetById(string id, CancellationToken ct)
         {
-            var post = await _postService.GetByIdAsync(id);
+            var post = await _postService.GetByIdAsync(id, ct);
             return Ok(post);
         }
 
         // POST api/posts
         [HttpPost]
-        public async Task<IActionResult> Create(CreatePostRequest request)
+        public async Task<IActionResult> Create(CreatePostRequest request, CancellationToken ct)
         {
             var postId = await _postService.CreateAsync(
                 new CreatePostCommand(
                     request.Caption,
                     request.Content
-                )
+                ),
+                ct
             );
 
             return CreatedAtAction(
@@ -59,14 +60,15 @@ namespace PostsService.Controllers
 
         // PUT api/posts/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> Replace(string id, ReplacePostRequest request)
+        public async Task<IActionResult> Replace(string id, ReplacePostRequest request, CancellationToken ct)
         {
             await _postService.ReplaceAsync(
                 new ReplacePostCommand(
                     id,
                     request.Caption,
                     request.Content
-                )
+                ),
+                ct
             );
 
             return NoContent();
@@ -74,14 +76,15 @@ namespace PostsService.Controllers
 
         // PATCH api/posts/{id}
         [HttpPatch("{id}")]
-        public async Task<IActionResult> UpdatePartial(string id, UpdatePostRequest request)
+        public async Task<IActionResult> UpdatePartial(string id, UpdatePostRequest request, CancellationToken ct)
         {
             await _postService.UpdateAsync(
                 new UpdatePostCommand(
                     id,
                     request.Caption,
                     request.Content
-                )
+                ),
+                ct
             );
 
             return NoContent();
@@ -89,9 +92,9 @@ namespace PostsService.Controllers
 
         // DELETE api/posts/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(string id)
+        public async Task<IActionResult> Delete(string id, CancellationToken ct)
         {
-            await _postService.DeleteAsync(id);
+            await _postService.DeleteAsync(id, ct);
             return NoContent();
         }
 

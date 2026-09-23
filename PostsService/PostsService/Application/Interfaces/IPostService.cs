@@ -5,11 +5,11 @@ namespace PostsService.Application.Interfaces
 {
     public interface IPostService
     {
-        Task<IReadOnlyCollection<PostResponse>> GetAllAsync();
-        Task<PostResponse> GetByIdAsync(string id);
-        Task<string> CreateAsync(CreatePostCommand command);
-        Task UpdateAsync(UpdatePostCommand command);
-        Task ReplaceAsync(ReplacePostCommand command);
-        Task DeleteAsync(string id);
+        Task<IReadOnlyCollection<PostResponse>> GetAllAsync(CancellationToken ct);
+        Task<PostResponse> GetByIdAsync(string id, CancellationToken ct);
+        Task<string> CreateAsync(CreatePostCommand command, CancellationToken ct);
+        Task UpdateAsync(UpdatePostCommand command, CancellationToken ct);
+        Task ReplaceAsync(ReplacePostCommand command, CancellationToken ct);
+        Task DeleteAsync(string id, CancellationToken ct);
     }
 }
