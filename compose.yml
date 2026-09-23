@@ -112,6 +112,22 @@ services:
             "pg_isready -U ${POSTS_USER} -d ${POSTS_DB}"
           ]
 
+  redis:
+    image: redis:${REDIS_VERSION}
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - appnet
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 networks:
   appnet:
 
@@ -119,3 +135,4 @@ volumes:
   kafka_data:
   pgdata_users:
   pgdata_posts:
+  redis_data:

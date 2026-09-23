@@ -28,17 +28,17 @@ namespace UsersService.Controllers
 
         // GET api/users
         [HttpGet]
-        public async Task<ActionResult<IReadOnlyCollection<UserResponse>>> GetAll()
+        public async Task<ActionResult<IReadOnlyCollection<UserResponse>>> GetAll(CancellationToken ct)
         {
-            var users = await _userService.GetAllAsync();
+            var users = await _userService.GetAllAsync(ct);
             return Ok(users);
         }
 
         // GET api/users/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<UserResponse>> GetById(string id)
+        public async Task<ActionResult<UserResponse>> GetById(string id, CancellationToken ct)
         {
-            var user = await _userService.GetByIdAsync(id);
+            var user = await _userService.GetByIdAsync(id, ct);
             return Ok(user);
         }
 
@@ -63,7 +63,7 @@ namespace UsersService.Controllers
 
         // PUT api/users/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> Replace(string id, ReplaceUserRequest request)
+        public async Task<IActionResult> Replace(string id, ReplaceUserRequest request, CancellationToken ct)
         {
             await _userService.ReplaceAsync(
                 new ReplaceUserCommand(
@@ -71,7 +71,8 @@ namespace UsersService.Controllers
                     request.Name,
                     request.SecondName,
                     request.BirthDate
-                )
+                ),
+                ct
             );
 
             return NoContent();
@@ -79,7 +80,7 @@ namespace UsersService.Controllers
 
         // PATCH api/users/{id}
         [HttpPatch("{id}")]
-        public async Task<IActionResult> UpdatePartial(string id, UpdateUserRequest request)
+        public async Task<IActionResult> UpdatePartial(string id, UpdateUserRequest request, CancellationToken ct)
         {
             await _userService.UpdateAsync(
                 new UpdateUserCommand(
@@ -87,7 +88,8 @@ namespace UsersService.Controllers
                     request.Name,
                     request.SecondName,
                     request.BirthDate
-                )
+                ),
+                ct
             );
 
             return NoContent();
@@ -95,9 +97,9 @@ namespace UsersService.Controllers
 
         // DELETE api/users/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(string id)
+        public async Task<IActionResult> Delete(string id, CancellationToken ct)
         {
-            await _userService.DeleteAsync(id);
+            await _userService.DeleteAsync(id, ct);
             return NoContent();
         }
 

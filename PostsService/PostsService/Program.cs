@@ -11,6 +11,7 @@ using PostsService.Application.Interfaces;
 using PostsService.Application.Messaging;
 using PostsService.Application.Services;
 using PostsService.Application.Validation;
+using PostsService.Infrastructure.Caching;
 using PostsService.Infrastructure.Db;
 using PostsService.Infrastructure.Db.Inbox;
 using PostsService.Infrastructure.Db.Outbox;
@@ -122,6 +123,15 @@ if (!builder.Environment.IsEnvironment("Migration"))
 
 builder.Services.AddScoped<IKafkaMessageProcessor, KafkaMessageProcessor>();
 builder.Services.AddSingleton<IDlqProducer, KafkaDlqProducer>();
+
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration["Redis:ConnectionString"];
+
+    options.InstanceName = "Widler:";
+});
+
+builder.Services.AddScoped<IPostCache, RedisPostCache>();
 
 builder.Services.AddScoped<IPostService, PostService>();
 builder.Services.AddScoped<IPostRepository, PostRepository>();

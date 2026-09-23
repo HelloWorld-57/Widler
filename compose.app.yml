@@ -34,6 +34,7 @@ services:
     environment:
           ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
           ConnectionStrings__DefaultConnection: Host=postgres_users;Port=5432;Database=${USERS_DB};Username=${USERS_USER};Password=${USERS_PASSWORD}
+          Redis__ConnectionString: redis:6379
 
   usersservice:
     <<: *dotnet-service
@@ -42,6 +43,7 @@ services:
         dockerfile: Dockerfile
     environment:
         ConnectionStrings__DefaultConnection: Host=postgres_users;Port=5432;Database=${USERS_DB};Username=${USERS_USER};Password=${USERS_PASSWORD}
+        Redis__ConnectionString: redis:6379
         Keycloak__Admin__BaseUrl: http://keycloak:8080
         Keycloak__Admin__Realm: widler
         Keycloak__Admin__ClientId: users-service-sync
@@ -59,6 +61,9 @@ services:
           
         keycloak:
           condition: service_started
+          
+        redis:
+          condition: service_healthy
     healthcheck:
         test:
           [
@@ -86,6 +91,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       ConnectionStrings__DefaultConnection: Host=postgres_posts;Port=5432;Database=${POSTS_DB};Username=${POSTS_USER};Password=${POSTS_PASSWORD}
+      Redis__ConnectionString: redis:6379
     networks:
       - appnet
 
@@ -96,6 +102,7 @@ services:
         dockerfile: Dockerfile
     environment:
         ConnectionStrings__DefaultConnection: Host=postgres_posts;Port=5432;Database=${POSTS_DB};Username=${POSTS_USER};Password=${POSTS_PASSWORD}
+        Redis__ConnectionString: redis:6379
     depends_on:
         postsservice_migrations:
           condition: service_completed_successfully
@@ -105,6 +112,9 @@ services:
 
         kafka_init:
           condition: service_completed_successfully
+
+        redis:
+          condition: service_healthy
 
     healthcheck:
         test:
